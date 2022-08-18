@@ -1,0 +1,31 @@
+// Each #kernel tells which function to compile; you can have many kernels
+#pragma kernel CSMain
+
+struct GrassData {
+    float3 position;
+    float2 offset;
+};
+
+RWTexture2D<float4> _PlacementTexture;
+RWStructuredBuffer<GrassData> _Grass;
+float2 _Resolution;
+
+[numthreads(8, 8, 1)]
+void CSMain (uint3 id : SV_DispatchThreadID)
+{
+    if (id.x < uint(_Resolution.x) && id.y < uint(_Resolution.y)) {
+        if (any(_PlacementTexture[id.xy] == float4(0.0, 0.0, 0.0, 0.0))) {
+            float xPos = id.x / _Resolution.x;
+            float zPos = id.y / _Resolution.y;
+
+            int index = (8 * id.y) + id.x;
+            
+            GrassData grass = _Grass[index];
+
+            grass.position = float3(xPos, 0.0, zPos);
+            grass.offset = float2(0.0, 0.0);
+
+            _Grass[index] = grass;
+        }
+    }
+}
