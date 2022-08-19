@@ -1,31 +1,35 @@
 // Each #kernel tells which function to compile; you can have many kernels
-#pragma kernel CSMain
+#pragma kernel FindGrassPoints
 
 struct GrassData {
-    float3 position;
-    float2 offset;
+    float4 position;
+    float2 displacement;
+    uint placePosition;
 };
 
-RWTexture2D<float4> _PlacementTexture;
-RWStructuredBuffer<GrassData> _Grass;
+// RWTexture2D<float4> _PlacementTexture;
+RWStructuredBuffer<GrassData> _GrassBuffer;
+RWTexture2D<float4> _TextureData;
 float2 _Resolution;
+float _GlobalOffset;
 
 [numthreads(8, 8, 1)]
-void CSMain (uint3 id : SV_DispatchThreadID)
+void FindGrassPoints (uint3 id : SV_DispatchThreadID)
 {
     if (id.x < uint(_Resolution.x) && id.y < uint(_Resolution.y)) {
-        if (any(_PlacementTexture[id.xy] == float4(0.0, 0.0, 0.0, 0.0))) {
-            float xPos = id.x / _Resolution.x;
-            float zPos = id.y / _Resolution.y;
+        float4 pixel = _TextureData.Load(id.xy);
+        float4 white = 1.0;
+        if (!(pixel.r == white.r && pixel.g == white.g && pixel.b == white.b && pixel.a == white.a)) {
+            uint index = (id.y * _Resolution.x) + id.x;
 
-            int index = (8 * id.y) + id.x;
-            
-            GrassData grass = _Grass[index];
+            GrassData grass = _GrassBuffer[index];
 
-            grass.position = float3(xPos, 0.0, zPos);
-            grass.offset = float2(0.0, 0.0);
+            grass.position.xz = id.xy + _GlobalOffset;
+            grass.position.y += _GlobalOffset;
+            grass.placePosition = 1;
+            grass.displacement = float2(0.0, 0.0);
 
-            _Grass[index] = grass;
+            _GrassBuffer[index] = grass;
         }
     }
 }
