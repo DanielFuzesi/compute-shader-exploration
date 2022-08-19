@@ -1,9 +1,11 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel FindGrassPoints
 
+#include "Assets/Resources/Simplex.compute"
+
 struct GrassData {
     float4 position;
-    float2 displacement;
+    float2 uv;
     uint placePosition;
 };
 
@@ -13,21 +15,40 @@ RWTexture2D<float4> _TextureData;
 float2 _Resolution;
 float _GlobalOffset;
 
+int _Scale;
+
 [numthreads(8, 8, 1)]
 void FindGrassPoints (uint3 id : SV_DispatchThreadID)
 {
     if (id.x < uint(_Resolution.x) && id.y < uint(_Resolution.y)) {
         float4 pixel = _TextureData.Load(id.xy);
         float4 white = 1.0;
+
         if (!(pixel.r == white.r && pixel.g == white.g && pixel.b == white.b && pixel.a == white.a)) {
             uint index = (id.y * _Resolution.x) + id.x;
+            float4 pos = 0.0f;
+            pos.xz = id.xy + _GlobalOffset;
+
+            // Tweak these values for more randomness
+            pos.x += snoise(float3(pos.xz, 0.0f) * 3.0f) * 0.3f;
+            pos.z += snoise(float3(pos.xz, 0.0f) * 4.0f) * 0.3f;
+
+            float2 uv = pos.xz;
+            uv = (id.xy) * (1.0f / float(_Scale));
+            uv.xy /= float(_Resolution.x) * (1.0f / float(_Scale));
+            uv.y = 1 - uv.y;
+            uv.x = 1 - uv.x;
+
+            float noise = abs(snoise(float3(pos.xz, 0.0f) * 0.2f));
+
+            pos.w = lerp(0.3f, 0.6f, noise);
 
             GrassData grass = _GrassBuffer[index];
 
-            grass.position.xz = id.xy + _GlobalOffset;
-            grass.position.y += _GlobalOffset;
+            grass.position = pos;
+            grass.uv = uv;
             grass.placePosition = 1;
-            grass.displacement = float2(0.0, 0.0);
+            grass.uv = float2(0.0, 0.0);
 
             _GrassBuffer[index] = grass;
         }

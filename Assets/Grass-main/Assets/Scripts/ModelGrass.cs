@@ -110,7 +110,6 @@ public class ModelGrass : MonoBehaviour {
         initializeChunks();
 
         fieldBounds = new Bounds(Vector3.zero, new Vector3(-fieldSize, displacementStrength * 2, fieldSize));
-        Debug.Log("Execution Time Finished: " + Time.realtimeSinceStartup);
     }
 
     void initializeChunks() {

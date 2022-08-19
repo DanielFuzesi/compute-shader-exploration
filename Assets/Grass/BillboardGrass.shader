@@ -33,25 +33,34 @@ Shader "Unlit/BillboardGrass"
 
             struct GrassData {
                 float4 position;
+                float2 offset;
+                uint placePosition;
             };
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
+            float _Scale;
             StructuredBuffer<GrassData> positionBuffer;
 
             v2f vert (VertexData v, uint instanceID : SV_INSTANCEID)
             {
                 v2f o;
 
-                float3 localPosition = v.vertex.xyz;
+                if (positionBuffer[instanceID].placePosition > 0) {
+                    float3 localPosition = v.vertex.xyz;
+                    
+                    float4 grassPosition = positionBuffer[instanceID].position;
 
-                float4 grassPosition = positionBuffer[instanceID].position;
+                    localPosition.y *= v.uv.y * (0.5f + grassPosition.w);
 
-                float4 worldPosition = float4(grassPosition.xyz + localPosition, 1.0f);
+                    float4 worldPosition = float4(grassPosition.xyz + localPosition, 1.0f);
 
-                o.vertex = UnityObjectToClipPos(worldPosition);
-                o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                
+                    o.vertex = UnityObjectToClipPos(worldPosition);
+                    o.uv = TRANSFORM_TEX(v.uv, _MainTex);
+                } else {
+                    o.vertex = 0.0f;
+                }
+
                 return o;
             }
 
