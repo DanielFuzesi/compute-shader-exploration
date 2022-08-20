@@ -46,15 +46,21 @@ Shader "Unlit/BillboardGrass"
             {
                 v2f o;
 
+                // Check if grass should be rendered
                 if (positionBuffer[instanceID].placePosition > 0) {
+                    // Get local position of the vertices
                     float3 localPosition = v.vertex.xyz;
                     
+                    // Get the grass position from the buffer
                     float4 grassPosition = positionBuffer[instanceID].position;
 
+                    // Manipulate grass height
                     localPosition.y *= v.uv.y * (0.5f + grassPosition.w);
 
+                    // Calculate world position
                     float4 worldPosition = float4(grassPosition.xyz + localPosition, 1.0f);
 
+                    // Set vertex position and uv's
                     o.vertex = UnityObjectToClipPos(worldPosition);
                     o.uv = TRANSFORM_TEX(v.uv, _MainTex);
                 } else {
@@ -66,6 +72,7 @@ Shader "Unlit/BillboardGrass"
 
             fixed4 frag (v2f i) : SV_Target
             {
+                // Set texture and alpha blending
                 fixed4 col = tex2D(_MainTex, i.uv);
                 clip(-(0.5 - col.a));
 
