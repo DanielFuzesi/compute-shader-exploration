@@ -20,8 +20,10 @@ public class Grass : MonoBehaviour
     private Terrain terrain;
     private TerrainData terrainData;
     private RenderTexture renderTexture;
-    private ComputeBuffer grassBuffer, argsBuffer;
+    private RenderTexture heightMap;
+    private ComputeBuffer grassBuffer, argsBuffer, heightsBuffer;
     private GrassData[] grassData;
+    // private float[,] terrainHeights;
 
     /*
     Steps to generate grass points on plane using a compute shader:
@@ -39,22 +41,28 @@ public class Grass : MonoBehaviour
     */
 
     private void Start() {
-        Debug.Log("Execution Time Start: " + Time.realtimeSinceStartup);
-
         terrain = GetComponent<Terrain>();
         terrainData = terrain.terrainData;
         terrainData.size = new Vector3(terrainDimension, terrainData.size.y, terrainDimension);
+        // terrainHeights = terrainData.GetHeights(0, 0, terrainData.heightmapResolution, terrainData.heightmapResolution);
+
+        // GetTerrainHeights(terrain, out terrainHeights, terrainDimension);
 
         grassBuffer = new ComputeBuffer(terrainDimension * terrainDimension, SizeOf(typeof(GrassData)));
+        // heightsBuffer = new ComputeBuffer(terrainData.heightmapResolution * terrainData.heightmapResolution, sizeof(float));
         argsBuffer = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
+
+        heightMap = new RenderTexture(terrainData.heightmapTexture.width, terrainData.heightmapTexture.width, terrainData.heightmapTexture.depth, terrainData.heightmapTexture.format);
+        heightMap.enableRandomWrite = true;
+        Graphics.CopyTexture(terrainData.heightmapTexture, heightMap);
+
+        // heightsBuffer.SetData(terrainHeights);
 
         placementTexture = Instantiate(placementTexture);
 
         TextureScale.Bilinear(placementTexture, terrainDimension, terrainDimension);
         ConvertTexture2dToRenderTexture(out renderTexture, placementTexture, placementTexture.width);
         
-        Debug.Log("Execution Time After Texture Rescale: " + Time.realtimeSinceStartup);
-
         UpdateGrassBuffer();
 
         Debug.Log("Execution Time Overall: " + Time.realtimeSinceStartup);
@@ -62,9 +70,22 @@ public class Grass : MonoBehaviour
 
     private void OnDisable() {
         grassBuffer.Release();
+        // heightsBuffer.Release();
         argsBuffer.Release();
+
         grassBuffer = null;
+        // heightsBuffer = null;
         argsBuffer = null;
+    }
+
+    private void GetTerrainHeights(Terrain ter, out float[,] heights, int dim) {
+        heights = new float[dim, dim];
+
+        for (int x = 0; x < dim; x++) {
+            for (int z = 0; z < dim; z++) {
+                heights[z,x] = ter.SampleHeight(new Vector3(x, 0, z));
+            }
+        }
     }
 
     private void ConvertTexture2dToRenderTexture(out RenderTexture rendTex, in Texture2D inputTex, int res) {
@@ -84,9 +105,15 @@ public class Grass : MonoBehaviour
         grassData = new GrassData[renderTexture.width * renderTexture.height];
 
         placementShader.SetBuffer(initKernelHandle, "_GrassBuffer", grassBuffer);
-        placementShader.SetTexture(initKernelHandle, "_TextureData", renderTexture);
-        placementShader.SetFloat(Shader.PropertyToID("_GlobalOffset"), 0.0f);
+        // placementShader.SetBuffer(initKernelHandle, "_HeightBuffer", heightsBuffer);
+        placementShader.SetTexture(initKernelHandle, "_PlacementMap", renderTexture);
+        placementShader.SetTexture(initKernelHandle, "_HeightMap", heightMap);
+        placementShader.SetVector("_TerrainPosition", terrain.transform.position);
         placementShader.SetVector("_Resolution", new Vector2(renderTexture.width, renderTexture.height));
+        placementShader.SetFloat(Shader.PropertyToID("_GlobalOffset"), 0.0f);
+        placementShader.SetFloat(Shader.PropertyToID("_MaxTerrainHeight"), terrainData.size.y);
+        placementShader.SetInt(Shader.PropertyToID("_Scale"), 1);
+        placementShader.SetInt(Shader.PropertyToID("_HeightMapRes"), terrainData.heightmapResolution);
         placementShader.Dispatch(initKernelHandle, groupW, groupH, 1);
 
         uint[] args = new uint[5] { 0, 0, 0, 0, 0 };
@@ -98,18 +125,14 @@ public class Grass : MonoBehaviour
         args[3] = (uint)grassMesh.GetBaseVertex(0);
         argsBuffer.SetData(args);
 
-        Debug.Log("Position ComputeShader Complete: " + Time.realtimeSinceStartup);
-
         grassMaterial.SetBuffer("positionBuffer", grassBuffer);
         grassMaterial.SetFloat("_Scale", 0.5f);
-        Graphics.DrawMeshInstancedIndirect(grassMesh, 0, grassMaterial, new Bounds(Vector3.zero, new Vector3(-500.0f, 200.0f, 500.0f)), argsBuffer);
-
-        Debug.Log("Grass Material Shader Complete: " + Time.realtimeSinceStartup);
+        Graphics.DrawMeshInstancedIndirect(grassMesh, 0, grassMaterial, new Bounds(Vector3.zero, new Vector3(-1500.0f, 200.0f, 1500.0f)), argsBuffer);
     }
 
     private void Update() {
         grassMaterial.SetBuffer("positionBuffer", grassBuffer);
-        Graphics.DrawMeshInstancedIndirect(grassMesh, 0, grassMaterial, new Bounds(Vector3.zero, new Vector3(-500.0f, 200.0f, 500.0f)), argsBuffer);
+        Graphics.DrawMeshInstancedIndirect(grassMesh, 0, grassMaterial, new Bounds(Vector3.zero, new Vector3(-1500.0f, 200.0f, 1500.0f)), argsBuffer);
 
         if (updateGrass) {
             UpdateGrassBuffer();

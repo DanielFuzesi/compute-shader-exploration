@@ -9,23 +9,38 @@ struct GrassData {
     uint placePosition;
 };
 
-// RWTexture2D<float4> _PlacementTexture;
 RWStructuredBuffer<GrassData> _GrassBuffer;
-RWTexture2D<float4> _TextureData;
-float2 _Resolution;
-float _GlobalOffset;
+RWTexture2D<float4> _PlacementMap;
+Texture2D<float4> _HeightMap;
 
-int _Scale;
+float3 _TerrainPosition;
+float2 _Resolution;
+float _GlobalOffset, _MaxTerrainHeight;
+
+int _Scale, _HeightMapRes;
+
+float scale(uint value, uint inMin, uint inMax, uint outMin, uint outMax) {
+    float result = (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
+
+    if (result < (float) outMin) {
+        return outMin;
+    } else if (result > (float) outMax) {
+        return outMax;
+    }
+
+    return result;
+}
 
 [numthreads(8, 8, 1)]
 void FindGrassPoints (uint3 id : SV_DispatchThreadID)
 {
     if (id.x < uint(_Resolution.x) && id.y < uint(_Resolution.y)) {
-        float4 pixel = _TextureData.Load(id.xy);
+        float4 pixel = _PlacementMap.Load(id.xy);
         float4 white = 1.0;
 
         if (!(pixel.r == white.r && pixel.g == white.g && pixel.b == white.b && pixel.a == white.a)) {
             uint index = (id.y * _Resolution.x) + id.x;
+
             float4 pos = 0.0f;
             pos.xz = id.xy + _GlobalOffset;
 
@@ -38,6 +53,15 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
             uv.xy /= float(_Resolution.x) * (1.0f / float(_Scale));
             uv.y = 1 - uv.y;
             uv.x = 1 - uv.x;
+
+            float x = scale(id.x, 0, _Resolution.x, 0, _HeightMapRes);
+            float y = scale(id.y, 0, _Resolution.y, 0, _HeightMapRes);
+            // float x = (id.x / _HeightMapRes) * _Resolution.x;
+            // float y = (id.y / _HeightMapRes) * _Resolution.y;
+            uint2 scaledIndex = uint2(uint(x), uint(y));
+
+            pos.y = _HeightMap[scaledIndex.xy].r * 2. * _MaxTerrainHeight;
+            // pos.y = _HeightBuffer[index];
 
             float noise = abs(snoise(float3(pos.xz, 0.0f) * 0.2f));
 
