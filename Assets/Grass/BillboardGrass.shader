@@ -43,6 +43,14 @@ Shader "Unlit/BillboardGrass"
             float _Scale, _WindStrength, _Rotation;
             StructuredBuffer<GrassData> positionBuffer;
 
+            float4 RotateAroundYInDegrees (float4 vertex, float degrees) {
+                float alpha = degrees * UNITY_PI / 180.0;
+                float sina, cosa;
+                sincos(alpha, sina, cosa);
+                float2x2 m = float2x2(cosa, -sina, sina, cosa);
+                return float4(mul(m, vertex.xz), vertex.yw).xzyw;
+            }
+
             v2f vert (VertexData v, uint instanceID : SV_INSTANCEID)
             {
                 v2f o;
@@ -50,7 +58,8 @@ Shader "Unlit/BillboardGrass"
                 // Check if grass should be rendered
                 if (positionBuffer[instanceID].placePosition > 0) {
                     // Get local position of the vertices
-                    float3 localPosition = v.vertex.xyz;
+                    // float3 localPosition = v.vertex.xyz;
+                    float3 localPosition = RotateAroundYInDegrees(v.vertex, randValue(_Rotation)).xyz;
 
                     float localWindVariance = min(max(0.4f, randValue(instanceID)), 0.75f);
                     

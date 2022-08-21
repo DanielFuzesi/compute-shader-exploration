@@ -106,6 +106,7 @@ public class Grass : MonoBehaviour
         grassMaterial.SetBuffer("positionBuffer", grassBuffer);
         grassMaterial.SetFloat("_Scale", density);
         grassMaterial.SetFloat("_WindStrength", 1);
+        grassMaterial.SetFloat("_Rotation", 89);
 
         // Draw all grass
         Graphics.DrawMeshInstancedIndirect(grassMesh, 0, grassMaterial, new Bounds(Vector3.zero, new Vector3(-1500.0f, 200.0f, 1500.0f)), argsBuffer);
