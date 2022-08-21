@@ -10,11 +10,14 @@ public class Grass : MonoBehaviour
         public uint placePosition;
     };
 
+    [SerializeField] private GameObject player;
     [SerializeField] private Texture2D placementTexture;
     [SerializeField] private ComputeShader placementShader;
     [SerializeField] private Mesh grassMesh;
     [SerializeField] private Material grassMaterial;
     [SerializeField] private int terrainDimension;
+    [Range(0, 5)]
+    [SerializeField] private float density = 1;
     [SerializeField] private bool updateGrass = false;
 
     private int groupW, groupH;
@@ -30,9 +33,12 @@ public class Grass : MonoBehaviour
         terrain = GetComponent<Terrain>();
         terrainData = terrain.terrainData;
         terrainData.size = new Vector3(terrainDimension, terrainData.size.y, terrainDimension);
+        int dims = (int) (terrainDimension * density);
+
+        player.SendMessage("UpdatePlayerPos");
 
         // Initialize compute buffers
-        grassBuffer = new ComputeBuffer(terrainDimension * terrainDimension, SizeOf(typeof(GrassData)));
+        grassBuffer = new ComputeBuffer(dims * dims, SizeOf(typeof(GrassData)));
         argsBuffer = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
 
         // Make a copy of the terrain heightmap
@@ -44,9 +50,9 @@ public class Grass : MonoBehaviour
         placementTexture = Instantiate(placementTexture);
 
         // Scale and convert placement texture to a RenderTexture format
-        TextureScale.Bilinear(placementTexture, terrainDimension, terrainDimension);
+        TextureScale.Bilinear(placementTexture, dims, dims);
         TextureToRenderTexture.ConvertTexture2dToRenderTexture(placementTexture, out renderTexture, placementTexture.width);
-        
+
         // Calculate dispatch groups for width and height of the placement map render texture
         groupW = Mathf.CeilToInt(renderTexture.width / 8f);
         groupH = Mathf.CeilToInt(renderTexture.height / 8f);
@@ -81,8 +87,9 @@ public class Grass : MonoBehaviour
         placementShader.SetVector("_Resolution", new Vector2(renderTexture.width, renderTexture.height));
         placementShader.SetFloat(Shader.PropertyToID("_GlobalOffset"), 0.0f);
         placementShader.SetFloat(Shader.PropertyToID("_MaxTerrainHeight"), terrainData.size.y);
-        placementShader.SetInt(Shader.PropertyToID("_Scale"), 1);
+        placementShader.SetFloat(Shader.PropertyToID("_Scale"), density);
         placementShader.SetInt(Shader.PropertyToID("_HeightMapRes"), terrainData.heightmapResolution);
+        placementShader.SetInt(Shader.PropertyToID("_TerrainDim"), terrainDimension);
         placementShader.Dispatch(initKernelHandle, groupW, groupH, 1);
 
         // Set draw mesh instanced indirect arguments
@@ -97,7 +104,8 @@ public class Grass : MonoBehaviour
 
         // Set material variables
         grassMaterial.SetBuffer("positionBuffer", grassBuffer);
-        grassMaterial.SetFloat("_Scale", 0.5f);
+        grassMaterial.SetFloat("_Scale", density);
+        grassMaterial.SetFloat("_WindStrength", 1);
 
         // Draw all grass
         Graphics.DrawMeshInstancedIndirect(grassMesh, 0, grassMaterial, new Bounds(Vector3.zero, new Vector3(-1500.0f, 200.0f, 1500.0f)), argsBuffer);
@@ -106,10 +114,11 @@ public class Grass : MonoBehaviour
     private void Update() {
         // Redraw the grass
         grassMaterial.SetBuffer("positionBuffer", grassBuffer);
-        Graphics.DrawMeshInstancedIndirect(grassMesh, 0, grassMaterial, new Bounds(Vector3.zero, new Vector3(-1500.0f, 200.0f, 1500.0f)), argsBuffer);
+        Graphics.DrawMeshInstancedIndirect(grassMesh, 0, grassMaterial, new Bounds(Vector3.zero, new Vector3(-terrainDimension, terrainData.size.y, terrainDimension)), argsBuffer);
 
         if (updateGrass) {
             UpdateGrassBuffer();
+            updateGrass = false;
         }
     }
 }

@@ -18,9 +18,9 @@ Texture2D<float4> _HeightMap;
 
 float3 _TerrainPosition;
 float2 _Resolution;
-float _GlobalOffset, _MaxTerrainHeight;
+float _GlobalOffset, _MaxTerrainHeight, _Scale;
 
-int _Scale, _HeightMapRes;
+int _HeightMapRes, _TerrainDim;
 
 // 8x8x1 threads which makes for optimal 64 threads
 [numthreads(8, 8, 1)]
@@ -39,24 +39,39 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
 
             // Set the grass position
             float4 pos = 0.0f;
-            pos.xz = id.xy + _GlobalOffset;
+            pos.x = scale(id.x, 0, _Resolution.x, 0, _TerrainDim);
+            pos.z = scale(id.y, 0, _Resolution.y, 0, _TerrainDim);
+            pos.xz += _GlobalOffset;
 
             // Apply noise to the horizontal position coordinates of the grass
             // FYI: Tweak these values for more randomness
-            pos.x += snoise(float3(pos.xz, 0.0f) * 3.0f) * 0.3f;
-            pos.z += snoise(float3(pos.xz, 0.0f) * 4.0f) * 0.3f;
+            float4 tempPosX = pos.x;
+            float4 tempPosZ = pos.z;
 
-            // Set the UV of the grass
+            pos.x += snoise(float3(pos.xz, 0.0f) * 3.0f) * 0.5f;
+            pos.z += snoise(float3(pos.xz, 0.0f) * 4.0f) * 0.5f;
+
+            // if (pos.x < 0 + _GlobalOffset || pos.x > _Resolution.x + _GlobalOffset) {
+            //     pos.x = tempPosX;
+            // }
+
+            // if (pos.z < 0 + _GlobalOffset || pos.z > _Resolution.y + _GlobalOffset) {
+            //     pos.z = tempPosZ;
+            // }
+
+
+            // Set the UV of the grass to sample height data
             // TODO: Tweak and understand this better!
-            float2 uv = pos.xz;
-            uv = (id.xy) * (1.0f / float(_Scale));
-            uv.xy /= float(_Resolution.x) * (1.0f / float(_Scale));
-            uv.y = 1 - uv.y;
-            uv.x = 1 - uv.x;
+            // TODO: Understand if needed, otherwise remove since its used to sample heightmap data
+            // float2 uv = pos.xz;
+            // uv = (id.xy) * (1.0f / float(_Scale));
+            // uv.xy /= float(_Resolution.x) * (1.0f / float(_Scale));
+            // uv.y = 1 - uv.y;
+            // uv.x = 1 - uv.x;
 
             // Scale x and y index of the placement map to match the new range of the heightmap
-            float x = scale(id.x, 0, _Resolution.x, 0, _HeightMapRes);
-            float y = scale(id.y, 0, _Resolution.y, 0, _HeightMapRes);
+            float x = scale(pos.x, 0, _TerrainDim, 0, _HeightMapRes);
+            float y = scale(pos.z, 0, _TerrainDim, 0, _HeightMapRes);
             uint2 scaledIndex = uint2(uint(x), uint(y));
 
             // Set the y position of the grass based on the heightmap data
@@ -73,9 +88,8 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
 
             // Apply calculated data to grass object
             grass.position = pos;
-            grass.uv = uv;
+            grass.uv = 0.0f;
             grass.placePosition = 1;
-            grass.uv = float2(0.0, 0.0);
 
             // Update grass in the buffer
             _GrassBuffer[index] = grass;

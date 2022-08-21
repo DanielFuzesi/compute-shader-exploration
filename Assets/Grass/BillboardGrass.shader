@@ -18,6 +18,7 @@ Shader "Unlit/BillboardGrass"
             #pragma target 4.5
 
             #include "UnityCG.cginc"
+            #include "Random.cginc"
 
             struct VertexData
             {
@@ -33,13 +34,13 @@ Shader "Unlit/BillboardGrass"
 
             struct GrassData {
                 float4 position;
-                float2 offset;
+                float2 uv;
                 uint placePosition;
             };
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
-            float _Scale;
+            float _Scale, _WindStrength, _Rotation;
             StructuredBuffer<GrassData> positionBuffer;
 
             v2f vert (VertexData v, uint instanceID : SV_INSTANCEID)
@@ -50,11 +51,25 @@ Shader "Unlit/BillboardGrass"
                 if (positionBuffer[instanceID].placePosition > 0) {
                     // Get local position of the vertices
                     float3 localPosition = v.vertex.xyz;
+
+                    float localWindVariance = min(max(0.4f, randValue(instanceID)), 0.75f);
                     
                     // Get the grass position from the buffer
                     float4 grassPosition = positionBuffer[instanceID].position;
 
+                    float cosTime;
+                    if (localWindVariance > 0.6f) {
+                        cosTime = cos(_Time.y * (_WindStrength - (grassPosition.w - 1.0f)));
+                    }
+                    else {
+                        cosTime = cos(_Time.y * ((_WindStrength - (grassPosition.w - 1.0f)) + localWindVariance * 0.1f));
+                    }
+
+                    float trigValue = ((cosTime * cosTime) * 0.65f) - localWindVariance * 0.5f;
+
                     // Manipulate grass height
+                    localPosition.x += v.uv.y * trigValue * grassPosition.w * localWindVariance * 0.6f;
+                    localPosition.z += v.uv.y * trigValue * grassPosition.w * 0.4f;
                     localPosition.y *= v.uv.y * (0.5f + grassPosition.w);
 
                     // Calculate world position
