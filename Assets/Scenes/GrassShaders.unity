@@ -445,10 +445,9 @@ MonoBehaviour:
   placementTexture: {fileID: 2800000, guid: 88a1dbacf6f127a4b8f9e214131dc799, type: 3}
   placementShader: {fileID: 7200000, guid: a03c152da238a584da1a7b96f5ea4f0b, type: 3}
   grassMesh: {fileID: 3000601502379706560, guid: c4178da972918a540955cf05f3a37624, type: 3}
-  grassMaterial: {fileID: 2100000, guid: e7fd8612d3136d84181fddabd497231f, type: 2}
+  grassMaterial: {fileID: 2100000, guid: a42c85f618261e849b492491ec2e175e, type: 2}
   terrainDimension: 32
-  density: 1
-  scale: 2
+  scale: 10
   updateGrass: 0
 --- !u!154 &2126231867
 TerrainCollider:
@@ -485,7 +484,7 @@ Terrain:
   m_DrawInstanced: 0
   m_DrawTreesAndFoliage: 1
   m_ReflectionProbeUsage: 1
-  m_MaterialTemplate: {fileID: 10651, guid: 0000000000000000f000000000000000, type: 0}
+  m_MaterialTemplate: {fileID: 10650, guid: 0000000000000000f000000000000000, type: 0}
   m_BakeLightProbesForTrees: 1
   m_PreserveTreePrototypeLayers: 0
   m_DeringLightProbesForTrees: 1

@@ -19,7 +19,7 @@ public class Grass : MonoBehaviour
     [SerializeField] private float scale = 1;
     [SerializeField] private bool updateGrass = false;
 
-    private int groupW, groupH;
+    private int groupW, groupH, dims;
     private Terrain terrain;
     private TerrainData terrainData;
     private RenderTexture renderTexture;
@@ -32,13 +32,9 @@ public class Grass : MonoBehaviour
         terrain = GetComponent<Terrain>();
         terrainData = terrain.terrainData;
         terrainData.size = new Vector3(terrainDimension, terrainData.size.y, terrainDimension);
-        int dims = (int) (terrainDimension * scale);
+        dims = (int) (terrainDimension * scale);
 
         player.SendMessage("UpdatePlayerPos");
-
-        // Initialize compute buffers
-        grassBuffer = new ComputeBuffer(dims * dims, SizeOf(typeof(GrassData)));
-        argsBuffer = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
 
         // Make a copy of the terrain heightmap
         heightMap = new RenderTexture(terrainData.heightmapTexture.width, terrainData.heightmapTexture.width, terrainData.heightmapTexture.depth, terrainData.heightmapTexture.format);
@@ -78,6 +74,12 @@ public class Grass : MonoBehaviour
         // Get kernel handle inside of the compute shader
         int initKernelHandle = placementShader.FindKernel("FindGrassPoints");
 
+        dims = (int) (terrainDimension * scale);
+
+        // Initialize compute buffers
+        grassBuffer = new ComputeBuffer(dims * dims, SizeOf(typeof(GrassData)));
+        argsBuffer = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
+
         // Set compute shader variables and dispatch kernel
         placementShader.SetBuffer(initKernelHandle, "_GrassBuffer", grassBuffer);
         placementShader.SetTexture(initKernelHandle, "_PlacementMap", renderTexture);
@@ -103,8 +105,6 @@ public class Grass : MonoBehaviour
 
         // Set material variables
         grassMaterial.SetBuffer("positionBuffer", grassBuffer);
-        grassMaterial.SetFloat("_Scale", scale);
-        grassMaterial.SetFloat("_WindStrength", 1);
         grassMaterial.SetFloat("_Rotation", 89);
 
         // Draw all grass
