@@ -16,8 +16,7 @@ public class Grass : MonoBehaviour
     [SerializeField] private Mesh grassMesh;
     [SerializeField] private Material grassMaterial;
     [SerializeField] private int terrainDimension;
-    [Range(0, 5)]
-    [SerializeField] private float density = 1;
+    [SerializeField] private float scale = 1;
     [SerializeField] private bool updateGrass = false;
 
     private int groupW, groupH;
@@ -33,7 +32,7 @@ public class Grass : MonoBehaviour
         terrain = GetComponent<Terrain>();
         terrainData = terrain.terrainData;
         terrainData.size = new Vector3(terrainDimension, terrainData.size.y, terrainDimension);
-        int dims = (int) (terrainDimension * density);
+        int dims = (int) (terrainDimension * scale);
 
         player.SendMessage("UpdatePlayerPos");
 
@@ -87,7 +86,7 @@ public class Grass : MonoBehaviour
         placementShader.SetVector("_Resolution", new Vector2(renderTexture.width, renderTexture.height));
         placementShader.SetFloat(Shader.PropertyToID("_GlobalOffset"), 0.0f);
         placementShader.SetFloat(Shader.PropertyToID("_MaxTerrainHeight"), terrainData.size.y);
-        placementShader.SetFloat(Shader.PropertyToID("_Scale"), density);
+        placementShader.SetFloat(Shader.PropertyToID("_Scale"), scale);
         placementShader.SetInt(Shader.PropertyToID("_HeightMapRes"), terrainData.heightmapResolution);
         placementShader.SetInt(Shader.PropertyToID("_TerrainDim"), terrainDimension);
         placementShader.Dispatch(initKernelHandle, groupW, groupH, 1);
@@ -104,7 +103,7 @@ public class Grass : MonoBehaviour
 
         // Set material variables
         grassMaterial.SetBuffer("positionBuffer", grassBuffer);
-        grassMaterial.SetFloat("_Scale", density);
+        grassMaterial.SetFloat("_Scale", scale);
         grassMaterial.SetFloat("_WindStrength", 1);
         grassMaterial.SetFloat("_Rotation", 89);
 

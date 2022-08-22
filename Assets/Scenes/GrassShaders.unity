@@ -199,13 +199,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 137327951}
-  m_LocalRotation: {x: 0, y: -0.11467699, z: 0, w: 0.99340284}
-  m_LocalPosition: {x: 1.41, y: -0.08, z: -4.31}
+  m_LocalRotation: {x: 0.04973971, y: -0.114533156, z: 0.0057418803, w: 0.99215686}
+  m_LocalPosition: {x: 1.41, y: 0.22, z: -4.31}
   m_LocalScale: {x: 1, y: 0.5, z: 1}
   m_Children: []
   m_Father: {fileID: 688787095}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 0, y: -13.17, z: 0}
+  m_LocalEulerAnglesHint: {x: 5.74, y: -13.17, z: 0}
 --- !u!1 &458838476
 GameObject:
   m_ObjectHideFlags: 0
@@ -444,10 +444,11 @@ MonoBehaviour:
   player: {fileID: 688787091}
   placementTexture: {fileID: 2800000, guid: 88a1dbacf6f127a4b8f9e214131dc799, type: 3}
   placementShader: {fileID: 7200000, guid: a03c152da238a584da1a7b96f5ea4f0b, type: 3}
-  grassMesh: {fileID: -7337254680014078677, guid: d5453986bfbea6a41b7ad742334249e6, type: 3}
+  grassMesh: {fileID: 3000601502379706560, guid: c4178da972918a540955cf05f3a37624, type: 3}
   grassMaterial: {fileID: 2100000, guid: e7fd8612d3136d84181fddabd497231f, type: 2}
-  terrainDimension: 300
+  terrainDimension: 32
   density: 1
+  scale: 2
   updateGrass: 0
 --- !u!154 &2126231867
 TerrainCollider:

@@ -19,7 +19,7 @@ public class RecenterRef : MonoBehaviour
         Vector3 centerPos = new Vector3(size.x / 2, 800, size.z / 2);
         Physics.Raycast(centerPos, Vector3.down, out hit, Mathf.Infinity, groundMask);
 
-        centerPos.y = hit.point.y + 2;
+        centerPos.y = hit.point.y + 2.8f;
 
         transform.position = centerPos;
     }

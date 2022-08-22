@@ -39,35 +39,26 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
 
             // Set the grass position
             float4 pos = 0.0f;
-            pos.x = scale(id.x, 0, _Resolution.x, 0, _TerrainDim);
-            pos.z = scale(id.y, 0, _Resolution.y, 0, _TerrainDim);
-            pos.xz += _GlobalOffset;
+            float _scale = float(_Scale);
+            pos.xz = (id.xy + _GlobalOffset) * (1.0f / _scale);
 
-            // Apply noise to the horizontal position coordinates of the grass
-            // FYI: Tweak these values for more randomness
+            // Save original grass position
             float4 tempPosX = pos.x;
             float4 tempPosZ = pos.z;
 
+            // Apply noise to the horizontal position coordinates of the grass
+            // FYI: Tweak these values for more randomness
             pos.x += snoise(float3(pos.xz, 0.0f) * 3.0f) * 0.5f;
             pos.z += snoise(float3(pos.xz, 0.0f) * 4.0f) * 0.5f;
 
-            // if (pos.x < 0 + _GlobalOffset || pos.x > _Resolution.x + _GlobalOffset) {
-            //     pos.x = tempPosX;
-            // }
+            // Check if displaced grass is within the terrain bounds
+            if (pos.x < 0 + _GlobalOffset || pos.x > _Resolution.x + _GlobalOffset) {
+                pos.x = tempPosX;
+            }
 
-            // if (pos.z < 0 + _GlobalOffset || pos.z > _Resolution.y + _GlobalOffset) {
-            //     pos.z = tempPosZ;
-            // }
-
-
-            // Set the UV of the grass to sample height data
-            // TODO: Tweak and understand this better!
-            // TODO: Understand if needed, otherwise remove since its used to sample heightmap data
-            // float2 uv = pos.xz;
-            // uv = (id.xy) * (1.0f / float(_Scale));
-            // uv.xy /= float(_Resolution.x) * (1.0f / float(_Scale));
-            // uv.y = 1 - uv.y;
-            // uv.x = 1 - uv.x;
+            if (pos.z < 0 + _GlobalOffset || pos.z > _Resolution.y + _GlobalOffset) {
+                pos.z = tempPosZ;
+            }
 
             // Scale x and y index of the placement map to match the new range of the heightmap
             float x = scale(pos.x, 0, _TerrainDim, 0, _HeightMapRes);
