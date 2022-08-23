@@ -55,7 +55,6 @@ public class ModelGrass : MonoBehaviour {
 
 
     void OnEnable() {
-        Debug.Log("Execution Time Overall: " + Time.realtimeSinceStartup);
         numInstancesPerChunk = Mathf.CeilToInt(fieldSize / numChunks) * chunkDensity;
         chunkDimension = numInstancesPerChunk;
         numInstancesPerChunk *= numInstancesPerChunk;

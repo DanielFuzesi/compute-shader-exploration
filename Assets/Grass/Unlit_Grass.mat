@@ -29,12 +29,12 @@ Material:
     - _FogDensity: 0
     - _FogOffset: 0
     - _LODCutoff: 100
-    - _Scale: 1.05
+    - _Scale: -0.3
     - _WindStrength: 1
     m_Colors:
-    - _AOColor: {r: 0, g: 0.16862746, b: 0.35686275, a: 1}
-    - _Albedo1: {r: 0.14509805, g: 0.42745098, b: 0.52156866, a: 1}
-    - _Albedo2: {r: 0.16862746, g: 0.28235295, b: 0.39607844, a: 1}
+    - _AOColor: {r: 0.12156863, g: 0.67058825, b: 0.5372549, a: 1}
+    - _Albedo1: {r: 0.38431373, g: 0.8235294, b: 0.63529414, a: 1}
+    - _Albedo2: {r: 0.6156863, g: 0.9529412, b: 0.76862746, a: 1}
     - _FogColor: {r: 1, g: 1, b: 1, a: 1}
-    - _TipColor: {r: 0.56078434, g: 0.8901961, b: 0.8117647, a: 1}
+    - _TipColor: {r: 0.03551085, g: 0.10025554, b: 0.3962264, a: 1}
   m_BuildTextureStacks: []

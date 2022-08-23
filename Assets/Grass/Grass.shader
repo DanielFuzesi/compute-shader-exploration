@@ -6,7 +6,7 @@ Shader "Unlit/Grass"
         _Albedo2 ("Albedo 2", Color) = (1, 1, 1)
         _AOColor ("Ambient Occlusion", Color) = (1, 1, 1)
         _TipColor ("Tip Color", Color) = (1, 1, 1)
-        _Scale ("Scale", Range(0.0, 10.0)) = 0.0
+        _Scale ("Scale", Range(-0.3, 10.0)) = 0.0
         _Droop ("Droop", Range(0.0, 10.0)) = 0.0
         _FogColor ("Fog Color", Color) = (1, 1, 1)
         _FogDensity ("Fog Density", Range(0.0, 1.0)) = 0.0
@@ -56,9 +56,12 @@ Shader "Unlit/Grass"
                 uint placePosition;
             };
 
+            sampler2D _WindTex;
             float4 _Albedo1, _Albedo2, _AOColor, _TipColor, _FogColor;
             float _Scale, _Droop, _FogDensity, _FogOffset;
             StructuredBuffer<GrassData> positionBuffer;
+
+            int _ChunkNum;
 
             float4 RotateAroundYInDegrees (float4 vertex, float degrees) {
                 float alpha = degrees * UNITY_PI / 180.0;
@@ -82,22 +85,38 @@ Shader "Unlit/Grass"
 
                 // Check if grass should be rendered
                 if (positionBuffer[instanceID].placePosition > 0) {
-                    // Get local position of the vertices and manipulate grass height
-                    float4 localPosition = RotateAroundXInDegrees(v.vertex, 90.0f);
-                    localPosition = RotateAroundYInDegrees(v.vertex, instanceID * randValue(180.0f));
-                    localPosition.y += _Scale * v.uv.y * v.uv.y * v.uv.y;
-                    localPosition.xz += _Droop * lerp(0.5f, 1.0f, instanceID) * (v.uv.y * v.uv.y * _Scale);
-
                     // Get the grass position from the buffer
                     float4 grassPosition = positionBuffer[instanceID].position;
 
+                    float idHash = randValue(abs(grassPosition.x * 10000 + grassPosition.y * 100 + grassPosition.z * 0.05f + 2));
+                    idHash = randValue(idHash * 100000);
+
+                    float4 animationDirection = float4(0.0f, 0.0f, 1.0f, 0.0f);
+                    animationDirection = normalize(RotateAroundYInDegrees(animationDirection, idHash * 180.0f));
+
+                    // Get local position of the vertices and manipulate grass height
+                    float4 localPosition = RotateAroundYInDegrees(v.vertex, idHash * 180.0f);
+                    localPosition.y += _Scale * v.uv.y * v.uv.y * v.uv.y;
+                    localPosition.xz += _Droop * lerp(0.5f, 1.0f, idHash) * (v.uv.y * v.uv.y * _Scale) * animationDirection;
+
+                    float4 worldUV = float4(positionBuffer[instanceID].uv, 0, 0);
+
+                    float swayVariance = lerp(0.1, 0.3, idHash);
+                    float movement = v.uv.y * v.uv.y * (tex2Dlod(_WindTex, worldUV).r);
+                    movement *= swayVariance;
+                    
+                    localPosition.xz += movement;
+
                     // Calculate world position
                     float4 worldPosition = float4(grassPosition.xyz + localPosition, 1.0f);
+                    worldPosition.y *= 1.0f + positionBuffer[instanceID].position.w * lerp(0.8f, 1.0f, idHash);
 
                     // Set vertex position and uv's
                     o.vertex = UnityObjectToClipPos(worldPosition);
                     o.uv = v.uv;
+                    o.noiseVal = tex2Dlod(_WindTex, worldUV).r;
                     o.worldPos = worldPosition;
+                    o.chunkNum = float3(randValue(_ChunkNum * 20 + 1024), randValue(randValue(_ChunkNum) * 10 + 2048), randValue(_ChunkNum * 4 + 4096));
 
                 } else {
                     o.vertex = 0.0f;

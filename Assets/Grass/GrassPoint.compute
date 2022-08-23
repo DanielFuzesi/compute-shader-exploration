@@ -18,16 +18,16 @@ Texture2D<float4> _HeightMap;
 
 float3 _TerrainPosition;
 float2 _Resolution;
-float _GlobalOffset, _MaxTerrainHeight, _Scale;
+float _MaxTerrainHeight, _Scale;
 
-int _HeightMapRes, _TerrainDim;
+int _HeightMapRes, _TerrainDim, _XOffset, _YOffset, _NumChunks, _ChunkDimension;
 
 // 8x8x1 threads which makes for optimal 64 threads
 [numthreads(8, 8, 1)]
 void FindGrassPoints (uint3 id : SV_DispatchThreadID)
 {
     // Check if id.x and id.y is within the placement map resolution range
-    if (id.x < uint(_Resolution.x) && id.y < uint(_Resolution.y)) {
+    if (id.x < uint(_ChunkDimension) && id.y < uint(_ChunkDimension)) {
         // Load pixel data from placement map
         float4 pixel = _PlacementMap.Load(id.xy);
         float4 black = float4(0.0, 0.0, 0.0, 1.0);
@@ -40,7 +40,13 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
             // Set the grass position
             float4 pos = 0.0f;
             float _scale = float(_Scale);
-            pos.xz = (id.xy + _GlobalOffset) * (1.0f / _scale);
+            float dimension = float(_TerrainDim);
+            float chunkDimension = float(_ChunkDimension);
+            float scaledDimension = dimension * _scale;
+
+            pos.x = (id.x - (chunkDimension * 0.5f * _NumChunks)) + chunkDimension * _XOffset;
+            pos.z = (id.y - (chunkDimension * 0.5f * _NumChunks)) + chunkDimension * _YOffset;
+            pos.xz *= (1.0f / _scale);
 
             // Save original grass position
             float4 tempPosX = pos.x;
@@ -52,13 +58,20 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
             pos.z += snoise(float3(pos.xz, 0.0f) * 4.0f) * 0.5f;
 
             // Check if displaced grass is within the terrain bounds
-            if (pos.x < 0 + _GlobalOffset || pos.x > _Resolution.x + _GlobalOffset) {
+            if (pos.x < _TerrainPosition.x || pos.x > _Resolution.x + _TerrainPosition.x) {
                 pos.x = tempPosX;
             }
 
-            if (pos.z < 0 + _GlobalOffset || pos.z > _Resolution.y + _GlobalOffset) {
+            if (pos.z < _TerrainPosition.z || pos.z > _Resolution.y + _TerrainPosition.z) {
                 pos.z = tempPosZ;
             }
+
+            float uvX = pos.x + dimension * 0.5f * _NumChunks * (1.0f / _NumChunks);
+            float uvY = pos.z + dimension * 0.5f * _NumChunks * (1.0f / _NumChunks);
+
+            float2 uv = float2(uvX, uvY) / dimension;
+            uv.y = 1 - uv.y;
+            uv.x = 1 - uv.x;
 
             // Scale x and y index of the placement map to match the new range of the heightmap
             float x = scale(pos.x, 0, _TerrainDim, 0, _HeightMapRes);
@@ -79,7 +92,7 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
 
             // Apply calculated data to grass object
             grass.position = pos;
-            grass.uv = 0.0f;
+            grass.uv = uv;
             grass.placePosition = 1;
 
             // Update grass in the buffer
