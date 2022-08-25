@@ -53,6 +53,7 @@ Shader "Unlit/Grass"
             struct GrassData {
                 float4 position;
                 float2 uv;
+                float displacement;
                 uint placePosition;
             };
 
@@ -83,44 +84,41 @@ Shader "Unlit/Grass"
             {
                 v2f o;
 
-                // Check if grass should be rendered
-                if (positionBuffer[instanceID].placePosition > 0) {
-                    // Get the grass position from the buffer
-                    float4 grassPosition = positionBuffer[instanceID].position;
+                // Get the grass position from the buffer
+                float4 grassPosition = positionBuffer[instanceID].position;
 
-                    float idHash = randValue(abs(grassPosition.x * 10000 + grassPosition.y * 100 + grassPosition.z * 0.05f + 2));
-                    idHash = randValue(idHash * 100000);
+                float idHash = randValue(abs(grassPosition.x * 10000 + grassPosition.y * 100 + grassPosition.z * 0.05f + 2));
+                idHash = randValue(idHash * 100000);
 
-                    float4 animationDirection = float4(0.0f, 0.0f, 1.0f, 0.0f);
-                    animationDirection = normalize(RotateAroundYInDegrees(animationDirection, idHash * 180.0f));
+                float4 animationDirection = float4(0.0f, 0.0f, 1.0f, 0.0f);
+                animationDirection = normalize(RotateAroundYInDegrees(animationDirection, idHash * 180.0f));
 
-                    // Get local position of the vertices and manipulate grass height
-                    float4 localPosition = RotateAroundYInDegrees(v.vertex, idHash * 180.0f);
-                    localPosition.y += _Scale * v.uv.y * v.uv.y * v.uv.y;
-                    localPosition.xz += _Droop * lerp(0.5f, 1.0f, idHash) * (v.uv.y * v.uv.y * _Scale) * animationDirection;
+                // Get local position of the vertices and manipulate grass height
+                float4 localPosition = RotateAroundYInDegrees(v.vertex, idHash * 180.0f);
+                localPosition.y += _Scale * v.uv.y * v.uv.y * v.uv.y;
+                localPosition.xz += _Droop * lerp(0.5f, 1.0f, idHash) * (v.uv.y * v.uv.y * _Scale) * animationDirection;
 
-                    float4 worldUV = float4(positionBuffer[instanceID].uv, 0, 0);
+                float4 worldUV = float4(positionBuffer[instanceID].uv, 0, 0);
 
-                    float swayVariance = lerp(0.1, 0.3, idHash);
-                    float movement = v.uv.y * v.uv.y * (tex2Dlod(_WindTex, worldUV).r);
-                    movement *= swayVariance;
-                    
-                    localPosition.xz += movement;
+                float swayVariance = lerp(0.1, 0.3, idHash);
+                float movement = v.uv.y * v.uv.y * (tex2Dlod(_WindTex, worldUV).r);
+                movement *= swayVariance;
+                
+                localPosition.xz += movement;
 
-                    // Calculate world position
-                    float4 worldPosition = float4(grassPosition.xyz + localPosition, 1.0f);
-                    worldPosition.y *= 1.0f + positionBuffer[instanceID].position.w * lerp(0.8f, 1.0f, idHash);
+                // Calculate world position
+                float4 worldPosition = float4(grassPosition.xyz + localPosition, 1.0f);
+                
+                worldPosition.y -= positionBuffer[instanceID].displacement;
+                worldPosition.y *= 1.0f + positionBuffer[instanceID].position.w * lerp(0.8f, 1.0f, idHash);
+                worldPosition.y += positionBuffer[instanceID].displacement;
 
-                    // Set vertex position and uv's
-                    o.vertex = UnityObjectToClipPos(worldPosition);
-                    o.uv = v.uv;
-                    o.noiseVal = tex2Dlod(_WindTex, worldUV).r;
-                    o.worldPos = worldPosition;
-                    o.chunkNum = float3(randValue(_ChunkNum * 20 + 1024), randValue(randValue(_ChunkNum) * 10 + 2048), randValue(_ChunkNum * 4 + 4096));
-
-                } else {
-                    o.vertex = 0.0f;
-                }
+                // Set vertex position and uv's
+                o.vertex = UnityObjectToClipPos(worldPosition);
+                o.uv = v.uv;
+                o.noiseVal = tex2Dlod(_WindTex, worldUV).r;
+                o.worldPos = worldPosition;
+                o.chunkNum = float3(randValue(_ChunkNum * 20 + 1024), randValue(randValue(_ChunkNum) * 10 + 2048), randValue(_ChunkNum * 4 + 4096));
 
                 return o;
             }

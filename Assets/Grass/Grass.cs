@@ -7,7 +7,8 @@ public class Grass : MonoBehaviour
     private struct GrassData {
         public Vector4 position;
         public Vector2 uv;
-        public uint placePosition;
+        public float displacement;
+        public bool placePosition;
     };
 
     private struct GrassChunk {
@@ -51,13 +52,14 @@ public class Grass : MonoBehaviour
 
     private RenderTexture renderTexture, heightMap, wind;
     
-    private ComputeBuffer grassBuffer, culledPositionsBuffer, argsBuffer, heightsBuffer, voteBuffer, scanBuffer, groupSumArrayBuffer, scannedGroupSumBuffer;
+    private ComputeBuffer grassBuffer, culledPositionsBuffer, argsBuffer, voteBuffer, scanBuffer, groupSumArrayBuffer, scannedGroupSumBuffer;
     
     private GrassData[] grassData;
     private GrassChunk[] chunks;
     
     private uint[] args;
     private uint[] argsLOD;
+    private float[,] heights;
 
     private Bounds fieldBounds;
 
@@ -106,13 +108,19 @@ public class Grass : MonoBehaviour
         // Instantiate a copy of the placement texture
         placementTexture = Instantiate(placementTexture);
 
-        Debug.Log(numInstancesPerChunk);
-
         // Scale and convert placement texture to a RenderTexture format
         int texDimension = (int) (terrainDimension * scale);
+        // Texture2D heightMapTex = toTexture2D(heightMap);
+
         TextureScale.Bilinear(placementTexture, texDimension, texDimension);
+        // TextureScale.Bilinear(heightMapTex, texDimension, texDimension);
+
         TextureToRenderTexture.ConvertTexture2dToRenderTexture(placementTexture, out renderTexture, placementTexture.width);
-        
+        // TextureToRenderTexture.ConvertTexture2dToRenderTexture(heightMapTex, out heightMap, heightMapTex.width);
+
+        Debug.Log(heightMap.width);
+        Debug.Log(renderTexture.width);
+
         // Set constant parameters for placement initialization shader
         initPlacementShader.SetTexture(0, "_PlacementMap", renderTexture);
         initPlacementShader.SetTexture(0, "_HeightMap", heightMap);
@@ -120,7 +128,8 @@ public class Grass : MonoBehaviour
         initPlacementShader.SetVector("_Resolution", new Vector2(renderTexture.width, renderTexture.height));
         initPlacementShader.SetFloat("_MaxTerrainHeight", terrainData.size.y);
         initPlacementShader.SetFloat("_Scale", scale);
-        initPlacementShader.SetInt("_HeightMapRes", terrainData.heightmapResolution);
+        initPlacementShader.SetFloat("_MeshHeight", grassMesh.bounds.size.y);
+        initPlacementShader.SetInt("_HeightMapRes", heightMap.width);
         initPlacementShader.SetInt("_TerrainDim", terrainDimension);
         initPlacementShader.SetInt("_NumChunks", numChunks);
         initPlacementShader.SetInt("_ChunkDimension", chunkDimension);
@@ -156,7 +165,6 @@ public class Grass : MonoBehaviour
 
     private void InitializeChunks() {
         // Initialize GrassData array with the scaled placement map dimensions
-        // grassData = new GrassData[renderTexture.width * renderTexture.height];
         chunks = new GrassChunk[numChunks * numChunks];
 
         for (int x = 0; x < numChunks; ++x) {
@@ -176,8 +184,6 @@ public class Grass : MonoBehaviour
         chunk.argsBuffer.SetData(args);
         chunk.argsBufferLOD.SetData(argsLOD);
 
-        Debug.Log(numInstancesPerChunk);
-
         chunk.positionsBuffer = new ComputeBuffer(numInstancesPerChunk, SizeOf(typeof(GrassData)));
         chunk.culledPositionsBuffer = new ComputeBuffer(numInstancesPerChunk, SizeOf(typeof(GrassData)));
         int chunkDim = Mathf.CeilToInt(terrainDimension / numChunks);
@@ -190,14 +196,14 @@ public class Grass : MonoBehaviour
         c.x += terrain.transform.position.x;
         c.z += terrain.transform.position.z;
         
-        chunk.bounds = new Bounds(c, new Vector3(-chunkDim, 10.0f, chunkDim));
+        chunk.bounds = new Bounds(c, new Vector3(-chunkDim, terrainData.size.y, chunkDim));
 
         // Set compute shader variables and dispatch kernel
         initPlacementShader.SetInt("_XOffset", xOffset);
         initPlacementShader.SetInt("_YOffset", yOffset);
         initPlacementShader.SetBuffer(0, "_GrassBuffer", chunk.positionsBuffer);
-        initPlacementShader.Dispatch(0, Mathf.CeilToInt(terrainDimension / numChunks * scale), Mathf.CeilToInt(terrainDimension / numChunks * scale), 1);
-
+        initPlacementShader.Dispatch(0, chunkDimension, chunkDimension, 1);
+        
         // Set material variables
         chunk.material = new Material(grassMaterial);
         chunk.material.SetBuffer("positionBuffer", chunk.culledPositionsBuffer);

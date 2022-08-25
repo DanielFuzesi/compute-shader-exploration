@@ -1,6 +1,6 @@
 
 // Method to scale number into a new range
-float scale(uint value, uint inMin, uint inMax, uint outMin, uint outMax) {
+float scale(float value, float inMin, float inMax, float outMin, float outMax) {
     float result = (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
 
     if (result < (float) outMin) {
