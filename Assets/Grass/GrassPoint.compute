@@ -15,6 +15,7 @@ struct GrassData {
 
 // Initialize variables
 RWStructuredBuffer<GrassData> _GrassBuffer;
+RWStructuredBuffer<uint> _ChunkCounter;
 RWTexture2D<float4> _PlacementMap;
 RWTexture2D<float4> _HeightMap;
 
@@ -23,14 +24,6 @@ float2 _Resolution;
 float _MaxTerrainHeight, _Scale, _MeshHeight;
 
 int _HeightMapRes, _TerrainDim, _XOffset, _YOffset, _NumChunks, _ChunkDimension;
-
-float2 Rotate(float2 input, float angle) {
-    float c = cos(angle * ((UNITY_PI * 2)/360));
-    float s = sin(angle * ((UNITY_PI * 2)/360));
-    return float2(
-        input.x * c - input.y * s,
-        input.x * s + input.y * c);
-}
 
 // 8x8x1 threads which makes for optimal 64 threads
 [numthreads(8, 8, 1)]
@@ -50,6 +43,9 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
 
         // Check if the pixel is black
         if (pixel.r == black.r && pixel.g == black.g && pixel.b == black.b && pixel.a == black.a) {
+
+            _ChunkCounter[0] += 1;
+
             // Set the grass position
             float4 pos = 0.0f;
 
@@ -64,8 +60,8 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
 
             // Apply noise to the horizontal position coordinates of the grass
             // FYI: Tweak these values for more randomness
-            pos.x += snoise(float3(pos.xz + _XOffset + _YOffset, 0.0f) * 3.0f) * 0.05f;
-            pos.z += snoise(float3(pos.xz + _XOffset + _YOffset, 0.0f) * 4.0f) * 0.05f;
+            pos.x += snoise(float3(pos.xz + _XOffset + _YOffset, 0.0f) * 3.0f) * 0.3f;
+            pos.z += snoise(float3(pos.xz + _XOffset + _YOffset, 0.0f) * 4.0f) * 0.3f;
 
             // Calculate UV of grass
             float uvX = pos.x + dimension * 0.5f * _NumChunks * (1.0f / _NumChunks);
@@ -75,19 +71,16 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
             uv.y = 1 - uv.y;
             uv.x = 1 - uv.x;
 
-            float x = id.x + _ChunkDimension * _XOffset;
-            float z = id.y + _ChunkDimension * _YOffset;
+            pixelX = scale(pixelX, 0, _Resolution.x, 0, _HeightMapRes);
+            pixelY = scale(pixelY, 0, _Resolution.y, 0, _HeightMapRes);
 
-            x = scale(x, 0, _Resolution.x, 0, _HeightMapRes);
-            z = scale(z, 0, _Resolution.y, 0, _HeightMapRes);
-
-            float2 sIndex = float2(x,z);
+            float2 sIndex = float2(pixelX, pixelY);
             float4 displacement = 0.0f;
 
             if (_HeightMap[sIndex].r != black.r){
                 displacement = _HeightMap[sIndex];
                 pos.y = displacement.r * _MaxTerrainHeight * 2;
-                _HeightMap[sIndex] = float4(1,0,0,1);
+                // _HeightMap[sIndex] = float4(1,0,0,1);
             }
 
             // Get a noise value based of the x and z coordinates
