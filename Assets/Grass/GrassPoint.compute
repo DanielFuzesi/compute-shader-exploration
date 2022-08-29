@@ -3,7 +3,7 @@
 
 #include "Simplex.compute"
 #include "UnityCG.cginc"
-#include "Scale.compute"
+#include "Assets\Grass\Scale.compute"
 
 // Struct for GrassData with position and UV's
 struct GrassData {
@@ -16,11 +16,15 @@ struct GrassData {
 // Initialize variables
 RWStructuredBuffer<GrassData> _GrassBuffer;
 RWStructuredBuffer<uint> _ChunkCounter;
-RWTexture2D<float4> _PlacementMap;
-RWTexture2D<float4> _HeightMap;
+
+Texture2D<float4> _HeightMap;
+Texture2D<float4> _PlacementMap;
+
+SamplerState sampler_HeightMap;
+SamplerState sampler_PlacementMap;
 
 float3 _TerrainPosition;
-float2 _Resolution;
+float2 _TerrainResolution;
 float _MaxTerrainHeight, _Scale, _MeshHeight;
 
 int _HeightMapRes, _TerrainDim, _XOffset, _YOffset, _NumChunks, _ChunkDimension;
@@ -32,10 +36,15 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
     // Check if id.x and id.y is within the placement map resolution range
     if (id.x < uint(_ChunkDimension) && id.y < uint(_ChunkDimension)) {
         // Load pixel data from placement map
-        int pixelX = id.x + _ChunkDimension * _XOffset;
-        int pixelY = id.y + _ChunkDimension * _YOffset;
+        float2 pixelUV = 0.0f;
 
-        float4 pixel = _PlacementMap.Load(uint2(pixelX, pixelY));
+        // Convert pixel coordinates to normalized value (0-1) and use that to sample placement map and get position for grass
+        pixelUV.x = id.x + _ChunkDimension * _XOffset;
+        pixelUV.y = id.y + _ChunkDimension * _YOffset;
+
+        pixelUV = normalize2D(pixelUV, _TerrainResolution);
+
+        float4 pixel = _PlacementMap.SampleLevel(sampler_PlacementMap, pixelUV, 0);
         float4 black = float4(0.0, 0.0, 0.0, 1.0);
 
         // Initialize a grass data variable
@@ -43,55 +52,36 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
 
         // Check if the pixel is black
         if (pixel.r == black.r && pixel.g == black.g && pixel.b == black.b && pixel.a == black.a) {
-
+            // increment the chunk counter to keep track of valid chunks
             _ChunkCounter[0] += 1;
 
-            // Set the grass position
+            // Set the grass position and cast the chunk dimension to float
             float4 pos = 0.0f;
-
-            float _scale = float(_Scale);
-            float dimension = float(_TerrainDim);
             float chunkDimension = float(_ChunkDimension);
-            float scaledDimension = dimension * _scale;
 
+            // Set XZ position of grass
             pos.x = (id.x - (chunkDimension * 0.5f * _NumChunks)) + chunkDimension * _XOffset;
             pos.z = (id.y - (chunkDimension * 0.5f * _NumChunks)) + chunkDimension * _YOffset;
-            pos.xz *= (1.0f / _scale);
+            pos.xz *= (1.0f / _Scale);
 
             // Apply noise to the horizontal position coordinates of the grass
-            // FYI: Tweak these values for more randomness
             pos.x += snoise(float3(pos.xz + _XOffset + _YOffset, 0.0f) * 3.0f) * 0.3f;
             pos.z += snoise(float3(pos.xz + _XOffset + _YOffset, 0.0f) * 4.0f) * 0.3f;
 
-            // Calculate UV of grass
-            float uvX = pos.x + dimension * 0.5f * _NumChunks * (1.0f / _NumChunks);
-            float uvY = pos.z + dimension * 0.5f * _NumChunks * (1.0f / _NumChunks);
-
-            float2 uv = float2(uvX, uvY) / dimension;
-            uv.y = 1 - uv.y;
-            uv.x = 1 - uv.x;
-
-            pixelX = scale(pixelX, 0, _Resolution.x, 0, _HeightMapRes);
-            pixelY = scale(pixelY, 0, _Resolution.y, 0, _HeightMapRes);
-
-            float2 sIndex = float2(pixelX, pixelY);
-            float4 displacement = 0.0f;
-
-            if (_HeightMap[sIndex].r != black.r){
-                displacement = _HeightMap[sIndex];
-                pos.y = displacement.r * _MaxTerrainHeight * 2;
-                // _HeightMap[sIndex] = float4(1,0,0,1);
-            }
+            // Find Y displacement of grass by sampling height map
+            float4 displacement = _HeightMap.SampleLevel(sampler_HeightMap, pixelUV, 0);
+            pos.y = displacement.r * _MaxTerrainHeight * 2;
 
             // Get a noise value based of the x and z coordinates
             float noise = abs(snoise(float3(pos.xz + _XOffset + _YOffset, 0.0f) * 2.2f));
 
+            // Set tallness of grass
             pos.w = lerp(0.3f, 0.8f, noise);
 
             // Apply calculated data to grass object
             grass.position = pos;
             grass.displacement = displacement.r * _MaxTerrainHeight * 2;
-            grass.uv = uv;
+            grass.uv = pixelUV;
             grass.placePosition = true;
 
             // Update grass in the buffer

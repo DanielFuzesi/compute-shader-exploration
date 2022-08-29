@@ -403,13 +403,13 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1527603122}
-  m_LocalRotation: {x: 0, y: 0.38268343, z: 0, w: 0.92387956}
-  m_LocalPosition: {x: 450, y: 20.66, z: 450}
+  m_LocalRotation: {x: 0.14446662, y: -0.6624936, z: 0.13237925, w: 0.722985}
+  m_LocalPosition: {x: 487.9, y: 3.3, z: 475.72}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 3
-  m_LocalEulerAnglesHint: {x: 0, y: 45, z: 0}
+  m_LocalEulerAnglesHint: {x: 22.6, y: -85, z: 0}
 --- !u!114 &1527603126
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -489,9 +489,9 @@ MonoBehaviour:
   grassMesh: {fileID: 3000601502379706560, guid: c4178da972918a540955cf05f3a37624, type: 3}
   grassLODMesh: {fileID: -7770208101625581653, guid: 91d38a1bdf7218e4499896d6d165adc9, type: 3}
   grassMaterial: {fileID: 2100000, guid: a42c85f618261e849b492491ec2e175e, type: 2}
-  terrainDimension: 1500
+  terrainDimension: 1000
   numChunks: 20
-  scale: 5
+  scale: 10
   lodCutoff: 1000
   distanceCutoff: 500
   windSpeed: 1

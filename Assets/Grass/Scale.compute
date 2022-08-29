@@ -1,6 +1,5 @@
-
 // Method to scale number into a new range
-float scale(float value, float inMin, float inMax, float outMin, float outMax) {
+float scaleValue(float value, float inMin, float inMax, float outMin, float outMax) {
     float result = (value - inMin) * (outMax - outMin) / (inMax - inMin) + outMin;
 
     if (result < (float) outMin) {
@@ -10,4 +9,22 @@ float scale(float value, float inMin, float inMax, float outMin, float outMax) {
     }
 
     return result;
+}
+
+/* Normalizes a point to fit between 0-1
+** The function assumes that the original dimension starts from (0,0) and spans
+** to the specified maxDimension.xy coordinates
+**
+** Parameters:
+**     samplePoint: XY coordinates of sampled point
+**     maxDimension: XY of maximum coordinates in sample area
+*/
+
+float2 normalize2D(float2 samplePoint, float2 maxDimension) {
+    float2 norm = 0.0f;
+
+    norm.x = samplePoint.x / maxDimension.x;
+    norm.y = samplePoint.y / maxDimension.y;
+
+    return norm;
 }

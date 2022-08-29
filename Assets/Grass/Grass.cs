@@ -2,7 +2,6 @@ using static System.Runtime.InteropServices.Marshal;
 using System.Collections.Generic;
 using UnityEngine;
 
-
 public class Grass : MonoBehaviour
 {
     private struct GrassData {
@@ -67,6 +66,7 @@ public class Grass : MonoBehaviour
         terrain = GetComponent<Terrain>();
         terrainData = terrain.terrainData;
         terrainData.size = new Vector3(terrainDimension, terrainData.size.y, terrainDimension);
+
         numInstancesPerChunk = Mathf.CeilToInt(terrainDimension / numChunks * scale);
         chunkDimension = numInstancesPerChunk;
         numInstancesPerChunk *= numInstancesPerChunk;
@@ -104,21 +104,14 @@ public class Grass : MonoBehaviour
         heightMap.enableRandomWrite = true;
         Graphics.CopyTexture(terrainData.heightmapTexture, heightMap);
 
-        // Instantiate a copy of the placement texture
-        placementTexture = Instantiate(placementTexture);
-
-        // Scale and convert placement texture to a RenderTexture format
-        int texDimension = (int) (terrainDimension * scale);
-
-        TextureScale.Bilinear(placementTexture, texDimension, texDimension);
-
+        // Convert placement texture to a RenderTexture format
         TextureToRenderTexture.ConvertTexture2dToRenderTexture(placementTexture, out renderTexture, placementTexture.width);
 
         // Set constant parameters for placement initialization shader
         initPlacementShader.SetTexture(0, "_PlacementMap", renderTexture);
         initPlacementShader.SetTexture(0, "_HeightMap", heightMap);
         initPlacementShader.SetVector("_TerrainPosition", terrain.transform.position);
-        initPlacementShader.SetVector("_Resolution", new Vector2(renderTexture.width, renderTexture.height));
+        initPlacementShader.SetVector("_TerrainResolution", new Vector2(numChunks * chunkDimension, numChunks * chunkDimension));
         initPlacementShader.SetFloat("_MaxTerrainHeight", terrainData.size.y);
         initPlacementShader.SetFloat("_Scale", scale);
         initPlacementShader.SetFloat("_MeshHeight", grassMesh.bounds.size.y);
@@ -146,20 +139,25 @@ public class Grass : MonoBehaviour
         argsLOD[2] = (uint)grassLODMesh.GetIndexStart(0);
         argsLOD[3] = (uint)grassLODMesh.GetBaseVertex(0);
 
+        // Initialize all of the chunks
         InitializeChunks();
 
+        // Set terrain center
         Vector3 terrainCenter = (terrainData.size / 2) + terrain.transform.position;
         terrainCenter.y = 0;
 
+        // Set terrain fields
         fieldBounds = new Bounds(terrainCenter, new Vector3(terrainDimension, terrainData.size.y / 2, terrainDimension));
 
         Debug.Log("Execution Time Overall: " + Time.realtimeSinceStartup);
     }
 
+    // Method to initialize all chunks for the terrain
     private void InitializeChunks() {
-        // Initialize GrassData array with the scaled placement map dimensions
+        // Initialize GrassChunk list
         List<GrassChunk> tempChunksList = new List<GrassChunk>();
 
+        // Add valid chunks to the list
         for (int x = 0; x < numChunks; ++x) {
             for (int y = 0; y < numChunks; ++y) {
                 bool valid;
@@ -171,32 +169,39 @@ public class Grass : MonoBehaviour
             }
         }
 
+        // Update number of chunks in case some were culled
         numChunks = tempChunksList.Count;
 
+        // Update chunks array
         chunks = new GrassChunk[numChunks];
         chunks = tempChunksList.ToArray();
 
+        // Set chunk list to null
         tempChunksList = null;
     }
 
-    // Method to update all of the grass buffers
+    // Method to initialize the chunk buffers for each individual chunk
     private GrassChunk InitializeChunkBuffer(int xOffset, int yOffset, out bool validChunk) {
+        // Initialize chunk and buffers
         GrassChunk chunk = new GrassChunk();
 
         uint[] chunkCounterData = new uint[1];
 
         ComputeBuffer chunkCounter = new ComputeBuffer(1, sizeof(uint));
+        chunk.positionsBuffer = new ComputeBuffer(numInstancesPerChunk, SizeOf(typeof(GrassData)));
+        chunk.culledPositionsBuffer = new ComputeBuffer(numInstancesPerChunk, SizeOf(typeof(GrassData)));
         chunk.argsBuffer = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
         chunk.argsBufferLOD = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
 
+        // Set buffer data
         chunkCounter.SetData(chunkCounterData);
         chunk.argsBuffer.SetData(args);
         chunk.argsBufferLOD.SetData(argsLOD);
 
-        chunk.positionsBuffer = new ComputeBuffer(numInstancesPerChunk, SizeOf(typeof(GrassData)));
-        chunk.culledPositionsBuffer = new ComputeBuffer(numInstancesPerChunk, SizeOf(typeof(GrassData)));
+        // Calculate the dimension of each chunk
         int chunkDim = Mathf.CeilToInt(terrainDimension / numChunks);
         
+        // Find center of chunk
         Vector3 c = new Vector3(0.0f, 0.0f, 0.0f);
 
         c.y = 0.0f;
@@ -205,18 +210,21 @@ public class Grass : MonoBehaviour
         c.x += terrain.transform.position.x;
         c.z += terrain.transform.position.z;
         
+        // Set chunk bounds
         chunk.bounds = new Bounds(c, new Vector3(-chunkDim, terrainData.size.y, chunkDim));
 
-        // Set compute shader variables and dispatch kernel
+        // Set final initilization compute shader variables and dispatch kernel
         initPlacementShader.SetInt("_XOffset", xOffset);
         initPlacementShader.SetInt("_YOffset", yOffset);
         initPlacementShader.SetBuffer(0, "_GrassBuffer", chunk.positionsBuffer);
         initPlacementShader.SetBuffer(0, "_ChunkCounter", chunkCounter);
         initPlacementShader.Dispatch(0, chunkDimension, chunkDimension, 1);
 
+        // Retrieve and release buffer data
         chunkCounter.GetData(chunkCounterData);
         chunkCounter.Release();
         
+        // Check if chunk is valid (contains grass)
         if (chunkCounterData[0] == 0) {
             FreeChunk(chunk);
             validChunk = false;
@@ -229,11 +237,13 @@ public class Grass : MonoBehaviour
         chunk.material.SetTexture("_WindTex", wind);
         chunk.material.SetInt("_ChunkNum", xOffset + yOffset * numChunks);
 
+        // Set chunk to valid and return
         validChunk = true;
 
         return chunk;
     }
 
+    // Method to cull grass
     private void CullGrass(GrassChunk chunk, Matrix4x4 VP, bool noLOD) {
         // Reset Args
         if (noLOD)
@@ -273,6 +283,7 @@ public class Grass : MonoBehaviour
         cullGrassShader.Dispatch(3, numThreadGroups, 1, 1);
     }
 
+    // Method to generate wind texture
     private void GenerateWind() {
         generateWindShader.SetTexture(0, "_WindMap", wind);
         generateWindShader.SetFloat("_Time", Time.time * windSpeed);
@@ -282,12 +293,15 @@ public class Grass : MonoBehaviour
     }
 
     private void Update() {
+        // Find camera matrix
         Matrix4x4 P = Camera.main.projectionMatrix;
         Matrix4x4 V = Camera.main.transform.worldToLocalMatrix;
         Matrix4x4 VP = P * V;
 
+        // Generate wind texture
         GenerateWind();
 
+        // Cull and draw grass for each chunk
         for (int i = 0; i < chunks.Length; ++i) {
             float dist = Vector3.Distance(Camera.main.transform.position, chunks[i].bounds.center);
 
@@ -301,6 +315,7 @@ public class Grass : MonoBehaviour
         }
     }
 
+    // Release all buffers and set them to null
     void OnDisable() {
         voteBuffer.Release();
         scanBuffer.Release();
@@ -321,6 +336,7 @@ public class Grass : MonoBehaviour
         chunks = null;
     }
 
+    // Method to release all buffers in the chunk and set them to null
     void FreeChunk(GrassChunk chunk) {
         chunk.positionsBuffer.Release();
         chunk.positionsBuffer = null;
@@ -338,5 +354,8 @@ public class Grass : MonoBehaviour
                 Gizmos.DrawWireCube(chunks[i].bounds.center, chunks[i].bounds.size);
             }
         }
+
+        Gizmos.color = Color.green;
+        Gizmos.DrawWireCube(fieldBounds.center, fieldBounds.size);
     }
 }
