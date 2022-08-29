@@ -34,6 +34,7 @@ Shader "Unlit/Grass"
             #include "AutoLight.cginc"
             #include "UnityCG.cginc"
             #include "Random.cginc"
+            #include "Rotation.cginc"
 
             struct VertexData
             {
@@ -54,7 +55,7 @@ Shader "Unlit/Grass"
                 float4 position;
                 float2 uv;
                 float displacement;
-                uint placePosition;
+                bool placePosition;
             };
 
             sampler2D _WindTex;
@@ -63,22 +64,6 @@ Shader "Unlit/Grass"
             StructuredBuffer<GrassData> positionBuffer;
 
             int _ChunkNum;
-
-            float4 RotateAroundYInDegrees (float4 vertex, float degrees) {
-                float alpha = degrees * UNITY_PI / 180.0;
-                float sina, cosa;
-                sincos(alpha, sina, cosa);
-                float2x2 m = float2x2(cosa, -sina, sina, cosa);
-                return float4(mul(m, vertex.xz), vertex.yw).xzyw;
-            }
-
-            float4 RotateAroundXInDegrees (float4 vertex, float degrees) {
-                float alpha = degrees * UNITY_PI / 180.0;
-                float sina, cosa;
-                sincos(alpha, sina, cosa);
-                float2x2 m = float2x2(cosa, -sina, sina, cosa);
-                return float4(mul(m, vertex.yz), vertex.xw).zxyw;
-            }
 
             v2f vert (VertexData v, uint instanceID : SV_INSTANCEID)
             {

@@ -2,15 +2,28 @@ Shader "Unlit/BillboardGrass"
 {
     Properties
     {
-        _MainTex ("Texture", 2D) = "white" {}
-        _WindStrength ("Wind Strength", Range(0.5, 50.0)) = 1
-        _CullingBias ("Cull Bias", Range(0.1, 1.0)) = 0.5
-        _LODCutoff ("LOD Cutoff", Range(10.0, 500.0)) = 100
+        // _WindStrength ("Wind Strength", Range(0.5, 50.0)) = 1
+        // _CullingBias ("Cull Bias", Range(0.1, 1.0)) = 0.5
+        // _LODCutoff ("LOD Cutoff", Range(10.0, 500.0)) = 100
+        _MaskTex ("Mask", 2D) = "white" {}
+        _Albedo1 ("Albedo 1", Color) = (1, 1, 1)
+        _Albedo2 ("Albedo 2", Color) = (1, 1, 1)
+        _AOColor ("Ambient Occlusion", Color) = (1, 1, 1)
+        _TipColor ("Tip Color", Color) = (1, 1, 1)
+        _Scale ("Scale", Range(-0.3, 10.0)) = 0.0
+        _Droop ("Droop", Range(0.0, 10.0)) = 0.0
+        _FogColor ("Fog Color", Color) = (1, 1, 1)
+        _FogDensity ("Fog Density", Range(0.0, 1.0)) = 0.0
+        _FogOffset ("Fog Offset", Range(0.0, 10.0)) = 0.0
     }
     SubShader
     {
-        Cull Off
         ZWrite On
+
+        Tags {
+            "RenderType" = "Transparent"
+            "Queue" = "Transparent"
+        }
 
         Pass
         {
@@ -20,8 +33,11 @@ Shader "Unlit/BillboardGrass"
 
             #pragma target 4.5
 
+            #include "UnityPBSLighting.cginc"
+            #include "AutoLight.cginc"
             #include "UnityCG.cginc"
             #include "Random.cginc"
+            #include "Rotation.cginc"
 
             struct VertexData
             {
@@ -33,92 +49,89 @@ Shader "Unlit/BillboardGrass"
             {
                 float2 uv : TEXCOORD0;
                 float4 vertex : SV_POSITION;
+                float4 worldPos : TEXCOORD1;
+                float noiseVal : TEXCOORD2;
+                float3 chunkNum : TEXCOORD3;
             };
 
             struct GrassData {
                 float4 position;
                 float2 uv;
-                uint placePosition;
+                float displacement;
+                bool placePosition;
             };
 
-            sampler2D _MainTex;
-            float4 _MainTex_ST;
-            float _Scale, _WindStrength, _Rotation, _CullingBias, _LODCutoff;
+            sampler2D _WindTex, _MaskTex;
+            float4 _Albedo1, _Albedo2, _AOColor, _TipColor, _FogColor;
+            float _Scale, _Droop, _FogDensity, _FogOffset;
             StructuredBuffer<GrassData> positionBuffer;
 
-            float4 RotateAroundYInDegrees (float4 vertex, float degrees) {
-                float alpha = degrees * UNITY_PI / 180.0;
-                float sina, cosa;
-                sincos(alpha, sina, cosa);
-                float2x2 m = float2x2(cosa, -sina, sina, cosa);
-                return float4(mul(m, vertex.xz), vertex.yw).xzyw;
-            }
-
-            bool VertexIsBelowClipPlane(float3 p, int planeIndex, float bias) {
-                float4 plane = unity_CameraWorldClipPlanes[planeIndex];
-
-                return dot(float4(p, 1), plane) < bias;
-            }  
-
-            bool cullVertex(float3 p, float bias) {
-                return  distance(_WorldSpaceCameraPos, p) > _LODCutoff ||
-                        VertexIsBelowClipPlane(p, 0, bias) ||
-                        VertexIsBelowClipPlane(p, 1, bias) ||
-                        VertexIsBelowClipPlane(p, 2, bias) ||
-                        VertexIsBelowClipPlane(p, 3, -1);
-            }
+            int _ChunkNum;
 
             v2f vert (VertexData v, uint instanceID : SV_INSTANCEID)
             {
                 v2f o;
 
-                // Check if grass should be rendered
-                if (positionBuffer[instanceID].placePosition > 0) {
-                    // Get local position of the vertices
-                    float3 localPosition = RotateAroundYInDegrees(v.vertex, randValue(_Rotation)).xyz;
+                // Get the grass position from the buffer
+                float4 grassPosition = positionBuffer[instanceID].position;
 
-                    // Initialize wind variance
-                    float localWindVariance = min(max(0.4f, randValue(instanceID)), 0.75f);
-                    
-                    // Get the grass position from the buffer
-                    float4 grassPosition = positionBuffer[instanceID].position;
+                float idHash = randValue(abs(grassPosition.x * 10000 + grassPosition.y * 100 + grassPosition.z * 0.05f + 2));
+                idHash = randValue(idHash * 100000);
 
-                    // Calculate wind movement
-                    float cosTime;
-                    if (localWindVariance > 0.6f) {
-                        cosTime = cos(_Time.y * (_WindStrength - (grassPosition.w - 1.0f)));
-                    }
-                    else {
-                        cosTime = cos(_Time.y * ((_WindStrength - (grassPosition.w - 1.0f)) + localWindVariance * 0.1f));
-                    }
+                float4 animationDirection = float4(0.0f, 0.0f, 1.0f, 0.0f);
+                animationDirection = normalize(RotateAroundYInDegrees(animationDirection, idHash * 180.0f));
 
-                    float trigValue = ((cosTime * cosTime) * 0.65f) - localWindVariance * 0.5f;
+                // Get local position of the vertices and manipulate grass height
+                float4 localPosition = RotateAroundYInDegrees(v.vertex, idHash * 180.0f);
+                localPosition.y += _Scale * v.uv.y * v.uv.y * v.uv.y;
+                localPosition.xz += _Droop * lerp(0.5f, 1.0f, idHash) * (v.uv.y * v.uv.y * _Scale) * animationDirection;
 
-                    // Manipulate grass height
-                    localPosition.x += v.uv.y * trigValue * grassPosition.w * localWindVariance * 0.6f;
-                    localPosition.z += v.uv.y * trigValue * grassPosition.w * 0.4f;
-                    localPosition.y *= v.uv.y * (0.5f + grassPosition.w);
+                float4 worldUV = float4(positionBuffer[instanceID].uv, 0, 0);
 
-                    // Calculate world position
-                    float4 worldPosition = float4(grassPosition.xyz + localPosition, 1.0f);
+                float swayVariance = lerp(0.1, 0.3, idHash);
+                float movement = v.uv.y * v.uv.y * (tex2Dlod(_WindTex, worldUV).r);
+                movement *= swayVariance;
+                
+                localPosition.xz += movement;
 
-                    // Set vertex position and uv's
-                    o.vertex = UnityObjectToClipPos(worldPosition);
-                    o.uv = TRANSFORM_TEX(v.uv, _MainTex);
-                } else {
-                    o.vertex = 0.0f;
-                }
+                // Calculate world position
+                float4 worldPosition = float4(grassPosition.xyz + localPosition, 1.0f);
+                
+                worldPosition.y -= positionBuffer[instanceID].displacement - 0.5f;
+                worldPosition.y *= (1.5f + positionBuffer[instanceID].position.w * lerp(0.8f, 1.0f, idHash));
+                worldPosition.y += positionBuffer[instanceID].displacement;
+
+                // Set vertex position and uv's
+                o.vertex = UnityObjectToClipPos(worldPosition);
+                o.uv = v.uv;
+                o.noiseVal = tex2Dlod(_WindTex, worldUV).r;
+                o.worldPos = worldPosition;
+                o.chunkNum = float3(randValue(_ChunkNum * 20 + 1024), randValue(randValue(_ChunkNum) * 10 + 2048), randValue(_ChunkNum * 4 + 4096));
 
                 return o;
             }
 
             fixed4 frag (v2f i) : SV_Target
             {
-                // Set texture and alpha blending
-                fixed4 col = tex2D(_MainTex, i.uv);
-                clip(-(0.5 - col.a));
+                fixed4 mask = tex2D(_MaskTex, i.uv).a;
+                float4 col = lerp(_Albedo1, _Albedo2, i.uv.y);
+                float3 lightDir = _WorldSpaceLightPos0.xyz;
+                float ndotl = DotClamped(lightDir, normalize(float3(0, 1, 0)));
 
-                return col;
+                float4 ao = lerp(_AOColor, 1.0f, i.uv.y);
+                float4 tip = lerp(0.0f, _TipColor, i.uv.y * i.uv.y * (1.0f + _Scale));
+
+                float4 grassColor = (col + tip) * ndotl * ao;
+
+                /* Fog */
+                float viewDistance = length(_WorldSpaceCameraPos - i.worldPos);
+                float fogFactor = (_FogDensity / sqrt(log(2))) * (max(0.0f, viewDistance - _FogOffset));
+                fogFactor = exp2(-fogFactor * fogFactor);
+
+                fixed4 fogCol = lerp(_FogColor, grassColor, fogFactor);
+                clip(-(0.5 - mask));
+
+                return fogCol;
             }
             ENDCG
         }

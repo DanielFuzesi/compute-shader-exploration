@@ -3,7 +3,7 @@
 
 #include "Simplex.compute"
 #include "UnityCG.cginc"
-#include "Assets\Grass\Scale.compute"
+#include "Scale.compute"
 
 // Struct for GrassData with position and UV's
 struct GrassData {

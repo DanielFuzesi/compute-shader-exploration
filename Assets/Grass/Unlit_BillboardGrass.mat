@@ -23,9 +23,22 @@ Material:
         m_Texture: {fileID: 2800000, guid: 8416135aee3fca84eb3ab5438ada998a, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _MaskTex:
+        m_Texture: {fileID: 2800000, guid: 017b0d3584ad14f4ca40cf7cef350118, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Floats:
     - _CullingBias: 0.392
+    - _Droop: 0
+    - _FogDensity: 0
+    - _FogOffset: 0
     - _LODCutoff: 245
+    - _Scale: 0
     - _WindStrength: 1
-    m_Colors: []
+    m_Colors:
+    - _AOColor: {r: 0.12156858, g: 0.67058825, b: 0.5372549, a: 1}
+    - _Albedo1: {r: 0.3843137, g: 0.8235294, b: 0.63529414, a: 1}
+    - _Albedo2: {r: 0.6156863, g: 0.9529411, b: 0.76862746, a: 1}
+    - _FogColor: {r: 1, g: 1, b: 1, a: 1}
+    - _TipColor: {r: 0.03551085, g: 0.10025551, b: 0.39622638, a: 1}
   m_BuildTextureStacks: []

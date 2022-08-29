@@ -1,24 +1,25 @@
 ToDo For Grass:
-- Normalize image sampling index (0-1) to get same sampling scale in any texture
-- Use card mesh (1 sided quad with texture) for LOD grass
-	- Allows to use smaller placement map textures for similar effect
-	- Since it takes up more space less positions points should be used
-	- Smaller density for far grass
-	- Grass could rotate towards player
-	- Blend card mesh and grass blade mesh when switching LOD to avoid pop-in
-		- When switching from low LOD to high quality grass try to make the grass grow from the ground to avoid pop-in
-- Calculate how many grass positions exist inside of every chunk to lower Compute Buffer size
-- Instead of using a culling buffer try using the boolean value within Grass struct to check if grass should be culled or not
-- Bend the grass mesh at center for a more realistic effect
-- Rotate the blades towards camera to avoid thin looking grass
-- Possibly add some translucency to the top of the grass blade
-- Short grass should use a 1 tri grass mesh
-- Dynamic LOD density, grass becomes more dense when walking up close and less in further scenes
-	- BOTW creates 2 tips from a blade to imitate a denser feel to the grass
-		- Adds extra vertex
+[X] Normalize image sampling index (0-1) to get same sampling scale in any texture
+[ ] Use card mesh (1 sided quad with texture) for LOD grass
+	[ ] Allows to use smaller placement map textures for similar effect
+	[ ] Since it takes up more space less positions points should be used
+	[ ] Smaller density for far grass
+	[ ] Grass could rotate towards player
+	[ ] Blend card mesh and grass blade mesh when switching LOD to avoid pop-in
+	[ ] Use alpha cutout to avoid overdraw
+		[ ] When switching from low LOD to high quality grass try to make the grass grow from the ground to avoid pop-in
+[ ] Calculate how many grass positions exist inside of every chunk to lower Compute Buffer size
+[ ] Instead of using a culling buffer try using the boolean value within Grass struct to check if grass should be culled or not
+[ ] Bend the grass mesh at center for a more realistic effect
+[ ] Rotate the blades towards camera to avoid thin looking grass
+[ ] Possibly add some translucency to the top of the grass blade
+[ ] Short grass should use a 1 tri grass mesh
+[ ] Dynamic LOD density, grass becomes more dense when walking up close and less in further scenes
+	[ ] BOTW creates 2 tips from a blade to imitate a denser feel to the grass
+		[ ] Adds extra vertex
 
-- Try animating wind only at the stems of the blade instead of all vertecies
-- Think about composition of the grass to use less grass
+[ ] Try animating wind only at the stems of the blade instead of all vertecies
+[ ] Think about composition of the grass to use less grass
 
-- IMPORTANT: For some reason some grass that is close to the player in BOTW disappears when approaching it
-- IMPORTANT: One blade of grass is procedurally shaped into different types of grass
+[ ] IMPORTANT: For some reason some grass that is close to the player in BOTW disappears when approaching it
+[ ] IMPORTANT: One blade of grass is procedurally shaped into different types of grass

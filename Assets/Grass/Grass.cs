@@ -18,14 +18,15 @@ public class Grass : MonoBehaviour
         public ComputeBuffer culledPositionsBuffer;
         public Bounds bounds;
         public Material material;
+        public Material lodMaterial;
     }
 
-    [SerializeField] private GameObject player;
     [SerializeField] private Texture2D placementTexture;
     [SerializeField] private ComputeShader initPlacementShader, generateWindShader, cullGrassShader;
     [SerializeField] private Mesh grassMesh;
     [SerializeField] private Mesh grassLODMesh;
     [SerializeField] private Material grassMaterial;
+    [SerializeField] private Material LOD_Material;
     [SerializeField] private int terrainDimension;
     [SerializeField] private int numChunks = 1;
     [SerializeField] private float scale = 1;
@@ -67,11 +68,10 @@ public class Grass : MonoBehaviour
         terrainData = terrain.terrainData;
         terrainData.size = new Vector3(terrainDimension, terrainData.size.y, terrainDimension);
 
+        // Calculate chunk variables
         numInstancesPerChunk = Mathf.CeilToInt(terrainDimension / numChunks * scale);
         chunkDimension = numInstancesPerChunk;
         numInstancesPerChunk *= numInstancesPerChunk;
-
-        player.SendMessage("UpdatePlayerPos");
 
         // Calculate dispatch groups for width and height of the placement map render texture
         numThreadGroups = Mathf.CeilToInt(numInstancesPerChunk / 128.0f);
@@ -237,6 +237,12 @@ public class Grass : MonoBehaviour
         chunk.material.SetTexture("_WindTex", wind);
         chunk.material.SetInt("_ChunkNum", xOffset + yOffset * numChunks);
 
+        // Set LOD material
+        chunk.lodMaterial = new Material(LOD_Material);
+        chunk.lodMaterial.SetBuffer("positionBuffer", chunk.culledPositionsBuffer);
+        chunk.lodMaterial.SetTexture("_WindTex", wind);
+        chunk.lodMaterial.SetInt("_ChunkNum", xOffset + yOffset * numChunks);
+
         // Set chunk to valid and return
         validChunk = true;
 
@@ -311,7 +317,7 @@ public class Grass : MonoBehaviour
             if (noLOD)
                 Graphics.DrawMeshInstancedIndirect(grassMesh, 0, chunks[i].material, fieldBounds, chunks[i].argsBuffer);
             else
-                Graphics.DrawMeshInstancedIndirect(grassLODMesh, 0, chunks[i].material, fieldBounds, chunks[i].argsBufferLOD);
+                Graphics.DrawMeshInstancedIndirect(grassLODMesh, 0, chunks[i].lodMaterial, fieldBounds, chunks[i].argsBufferLOD);
         }
     }
 

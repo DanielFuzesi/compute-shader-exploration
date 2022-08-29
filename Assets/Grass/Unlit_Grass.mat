@@ -29,7 +29,7 @@ Material:
     - _FogDensity: 0
     - _FogOffset: 0
     - _LODCutoff: 100
-    - _Scale: -0.3
+    - _Scale: 0
     - _WindStrength: 1
     m_Colors:
     - _AOColor: {r: 0.12156863, g: 0.67058825, b: 0.5372549, a: 1}
