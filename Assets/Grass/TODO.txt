@@ -1,13 +1,15 @@
 ToDo For Grass:
 [X] Normalize image sampling index (0-1) to get same sampling scale in any texture
+[ ] LOD grass doesnt always match color, add white and black overlay/multiplication parameter
+[ ] Grass mesh has 2 extra vertecies after importing from Blender
 [ ] Use card mesh (1 sided quad with texture) for LOD grass
 	[ ] Allows to use smaller placement map textures for similar effect
 	[ ] Since it takes up more space less positions points should be used
 	[ ] Smaller density for far grass
 	[ ] Grass could rotate towards player
 	[ ] Blend card mesh and grass blade mesh when switching LOD to avoid pop-in
-	[ ] Use alpha cutout to avoid overdraw
 		[ ] When switching from low LOD to high quality grass try to make the grass grow from the ground to avoid pop-in
+	[X] Use alpha cutout to avoid overdraw
 [ ] Calculate how many grass positions exist inside of every chunk to lower Compute Buffer size
 [ ] Instead of using a culling buffer try using the boolean value within Grass struct to check if grass should be culled or not
 [ ] Bend the grass mesh at center for a more realistic effect

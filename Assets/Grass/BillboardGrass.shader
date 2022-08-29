@@ -11,6 +11,7 @@ Shader "Unlit/BillboardGrass"
         _AOColor ("Ambient Occlusion", Color) = (1, 1, 1)
         _TipColor ("Tip Color", Color) = (1, 1, 1)
         _Scale ("Scale", Range(-0.3, 10.0)) = 0.0
+        _HeightOffset("Texture Height Offset", Range(1.0, 10)) = 1.0
         _Droop ("Droop", Range(0.0, 10.0)) = 0.0
         _FogColor ("Fog Color", Color) = (1, 1, 1)
         _FogDensity ("Fog Density", Range(0.0, 1.0)) = 0.0
@@ -63,7 +64,7 @@ Shader "Unlit/BillboardGrass"
 
             sampler2D _WindTex, _MaskTex;
             float4 _Albedo1, _Albedo2, _AOColor, _TipColor, _FogColor;
-            float _Scale, _Droop, _FogDensity, _FogOffset;
+            float _Scale, _Droop, _FogDensity, _FogOffset, _HeightOffset;
             StructuredBuffer<GrassData> positionBuffer;
 
             int _ChunkNum;
@@ -98,7 +99,7 @@ Shader "Unlit/BillboardGrass"
                 float4 worldPosition = float4(grassPosition.xyz + localPosition, 1.0f);
                 
                 worldPosition.y -= positionBuffer[instanceID].displacement - 0.5f;
-                worldPosition.y *= (1.5f + positionBuffer[instanceID].position.w * lerp(0.8f, 1.0f, idHash));
+                worldPosition.y *= (_HeightOffset + positionBuffer[instanceID].position.w * lerp(0.8f, 1.0f, idHash));
                 worldPosition.y += positionBuffer[instanceID].displacement;
 
                 // Set vertex position and uv's
