@@ -8,7 +8,7 @@ public class Grass : MonoBehaviour
         public Vector4 position;
         public Vector2 uv;
         public float displacement;
-        public bool placePosition;
+        public uint placePosition;
     };
 
     private struct GrassChunk {
@@ -62,7 +62,11 @@ public class Grass : MonoBehaviour
 
     private Bounds fieldBounds;
 
+    private float time;
+
     private void OnEnable() {
+        time = Time.realtimeSinceStartup;
+
         // Get terrain data and components
         terrain = GetComponent<Terrain>();
         terrainData = terrain.terrainData;
@@ -109,6 +113,7 @@ public class Grass : MonoBehaviour
 
         // Set constant parameters for placement initialization shader
         initPlacementShader.SetTexture(0, "_PlacementMap", renderTexture);
+        initPlacementShader.SetTexture(1, "_PlacementMap", renderTexture);
         initPlacementShader.SetTexture(0, "_HeightMap", heightMap);
         initPlacementShader.SetVector("_TerrainPosition", terrain.transform.position);
         initPlacementShader.SetVector("_TerrainResolution", new Vector2(numChunks * chunkDimension, numChunks * chunkDimension));
@@ -149,7 +154,10 @@ public class Grass : MonoBehaviour
         // Set terrain fields
         fieldBounds = new Bounds(terrainCenter, new Vector3(terrainDimension, terrainData.size.y / 2, terrainDimension));
 
-        Debug.Log("Execution Time Overall: " + Time.realtimeSinceStartup);
+        // CreateBallsAtPos();
+
+        time = Time.realtimeSinceStartup - time;
+        Debug.Log("Execution Time Overall: " + time);
     }
 
     // Method to initialize all chunks for the terrain
@@ -185,16 +193,38 @@ public class Grass : MonoBehaviour
         // Initialize chunk and buffers
         GrassChunk chunk = new GrassChunk();
 
-        uint[] chunkCounterData = new uint[1];
-
+        // Initialize buffer to hold counters
+        uint[] chunkCounterData = {0};
         ComputeBuffer chunkCounter = new ComputeBuffer(1, sizeof(uint));
-        chunk.positionsBuffer = new ComputeBuffer(numInstancesPerChunk, SizeOf(typeof(GrassData)));
-        chunk.culledPositionsBuffer = new ComputeBuffer(numInstancesPerChunk, SizeOf(typeof(GrassData)));
+        chunkCounter.SetData(chunkCounterData);
+
+        // Dispatch shader to calculate number of actual grass positions based on texture
+        initPlacementShader.SetInt("_XOffset", xOffset);
+        initPlacementShader.SetInt("_YOffset", yOffset);
+        initPlacementShader.SetBuffer(1, "_ChunkCounter", chunkCounter);
+        initPlacementShader.Dispatch(1, chunkDimension, chunkDimension, 1);
+
+        // Retreive counter buffer data and release
+        chunkCounter.GetData(chunkCounterData);
+        chunkCounter.Release();
+        chunkCounter = null;
+
+        // If the chunk doesn't contain any grass, invalidate the chunk and return
+        if (chunkCounterData[0] < 1) {
+            validChunk = false;
+            return chunk;
+        }
+
+        // Setup position and argument buffers
+        chunk.positionsBuffer = new ComputeBuffer((int) chunkCounterData[0], SizeOf(typeof(GrassData)), ComputeBufferType.Append);
+        chunk.culledPositionsBuffer = new ComputeBuffer((int) chunkCounterData[0], SizeOf(typeof(GrassData)));
         chunk.argsBuffer = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
         chunk.argsBufferLOD = new ComputeBuffer(1, 5 * sizeof(uint), ComputeBufferType.IndirectArguments);
 
+        // Reset append buffer counter value so it always starts from index = 0
+        chunk.positionsBuffer.SetCounterValue(0);
+
         // Set buffer data
-        chunkCounter.SetData(chunkCounterData);
         chunk.argsBuffer.SetData(args);
         chunk.argsBufferLOD.SetData(argsLOD);
 
@@ -214,22 +244,8 @@ public class Grass : MonoBehaviour
         chunk.bounds = new Bounds(c, new Vector3(-chunkDim, terrainData.size.y, chunkDim));
 
         // Set final initilization compute shader variables and dispatch kernel
-        initPlacementShader.SetInt("_XOffset", xOffset);
-        initPlacementShader.SetInt("_YOffset", yOffset);
         initPlacementShader.SetBuffer(0, "_GrassBuffer", chunk.positionsBuffer);
-        initPlacementShader.SetBuffer(0, "_ChunkCounter", chunkCounter);
         initPlacementShader.Dispatch(0, chunkDimension, chunkDimension, 1);
-
-        // Retrieve and release buffer data
-        chunkCounter.GetData(chunkCounterData);
-        chunkCounter.Release();
-        
-        // Check if chunk is valid (contains grass)
-        if (chunkCounterData[0] == 0) {
-            FreeChunk(chunk);
-            validChunk = false;
-            return chunk;
-        }
 
         // Set material variables
         chunk.material = new Material(grassMaterial);

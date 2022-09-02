@@ -59,7 +59,7 @@ Shader "Unlit/BillboardGrass"
                 float4 position;
                 float2 uv;
                 float displacement;
-                bool placePosition;
+                uint placePosition;
             };
 
             sampler2D _WindTex, _MaskTex;

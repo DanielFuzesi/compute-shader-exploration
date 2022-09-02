@@ -1,9 +1,9 @@
 ToDo For Grass:
 [X] Normalize image sampling index (0-1) to get same sampling scale in any texture
+	[X] Allows to use smaller placement map textures for similar effect
 [ ] LOD grass doesnt always match color, add white and black overlay/multiplication parameter
 [ ] Grass mesh has 2 extra vertecies after importing from Blender
 [ ] Use card mesh (1 sided quad with texture) for LOD grass
-	[ ] Allows to use smaller placement map textures for similar effect
 	[ ] Since it takes up more space less positions points should be used
 	[ ] Smaller density for far grass
 	[ ] Grass could rotate towards player
@@ -25,3 +25,8 @@ ToDo For Grass:
 
 [ ] IMPORTANT: For some reason some grass that is close to the player in BOTW disappears when approaching it
 [ ] IMPORTANT: One blade of grass is procedurally shaped into different types of grass
+
+
+1. Cull compute buffer size to contain exactly the amount of grass needed
+2. During LOD set placePosition bool to false to render less grass
+3. During normal grass set placePosition bool to true to render all of the grass

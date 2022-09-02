@@ -1,5 +1,6 @@
 // Each #kernel tells which function to compile; you can have many kernels
 #pragma kernel FindGrassPoints
+#pragma kernel FindGrassCount
 
 #include "Simplex.compute"
 #include "UnityCG.cginc"
@@ -10,11 +11,11 @@ struct GrassData {
     float4 position;
     float2 uv;
     float displacement;
-    bool placePosition;
+    uint placePosition;
 };
 
 // Initialize variables
-RWStructuredBuffer<GrassData> _GrassBuffer;
+AppendStructuredBuffer<GrassData> _GrassBuffer;
 RWStructuredBuffer<uint> _ChunkCounter;
 
 Texture2D<float4> _HeightMap;
@@ -29,6 +30,25 @@ float _MaxTerrainHeight, _Scale, _MeshHeight;
 
 int _HeightMapRes, _TerrainDim, _XOffset, _YOffset, _NumChunks, _ChunkDimension;
 
+// Function to get UV coordinates of current id
+float2 GetUVTexCoord(uint3 id : SV_DispatchThreadID) {
+    float2 uv = 0.0f;
+
+    // Convert pixel coordinates to normalized value (0-1) and use that to sample placement map and get position for grass
+    uv.x = id.x + _ChunkDimension * _XOffset;
+    uv.y = id.y + _ChunkDimension * _YOffset;
+
+    uv = normalize2D(uv, _TerrainResolution);
+
+    return uv;
+}
+
+// Check if pixel parameter is valid color
+bool IsPixelValid(float4 pixel) {
+    float4 black = float4(0.0, 0.0, 0.0, 1.0);
+    return (pixel.r == black.r && pixel.g == black.g && pixel.b == black.b && pixel.a == black.a);
+}
+
 // 8x8x1 threads which makes for optimal 64 threads
 [numthreads(8, 8, 1)]
 void FindGrassPoints (uint3 id : SV_DispatchThreadID)
@@ -36,25 +56,14 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
     // Check if id.x and id.y is within the placement map resolution range
     if (id.x < uint(_ChunkDimension) && id.y < uint(_ChunkDimension)) {
         // Load pixel data from placement map
-        float2 pixelUV = 0.0f;
-
-        // Convert pixel coordinates to normalized value (0-1) and use that to sample placement map and get position for grass
-        pixelUV.x = id.x + _ChunkDimension * _XOffset;
-        pixelUV.y = id.y + _ChunkDimension * _YOffset;
-
-        pixelUV = normalize2D(pixelUV, _TerrainResolution);
-
+        float2 pixelUV = float2(GetUVTexCoord(id));
         float4 pixel = _PlacementMap.SampleLevel(sampler_PlacementMap, pixelUV, 0);
-        float4 black = float4(0.0, 0.0, 0.0, 1.0);
 
         // Initialize a grass data variable
         GrassData grass;
 
         // Check if the pixel is black
-        if (pixel.r == black.r && pixel.g == black.g && pixel.b == black.b && pixel.a == black.a) {
-            // increment the chunk counter to keep track of valid chunks
-            _ChunkCounter[0] += 1;
-
+        if (IsPixelValid(pixel)) {
             // Set the grass position and cast the chunk dimension to float
             float4 pos = 0.0f;
             float chunkDimension = float(_ChunkDimension);
@@ -82,12 +91,24 @@ void FindGrassPoints (uint3 id : SV_DispatchThreadID)
             grass.position = pos;
             grass.displacement = displacement.r * _MaxTerrainHeight * 2;
             grass.uv = pixelUV;
-            grass.placePosition = true;
+            grass.placePosition = 1;
 
             // Update grass in the buffer
-            _GrassBuffer[id.x + id.y * _ChunkDimension] = grass;
-        } else {
-            grass.placePosition = false;
+            _GrassBuffer.Append(grass);
+        } 
+    }
+}
+
+// Function to find number of actual grass per chunk
+[numthreads(8, 8, 1)]
+void FindGrassCount (uint3 id: SV_DispatchThreadID)
+{
+    if (id.x < uint(_ChunkDimension) && id.y < uint(_ChunkDimension)) {
+        float2 pixelUV = float2(GetUVTexCoord(id));
+        float4 pixel = _PlacementMap.SampleLevel(sampler_PlacementMap, pixelUV, 0);
+
+        if (IsPixelValid(pixel)) {
+            InterlockedAdd(_ChunkCounter[0], 1);
         }
     }
 }
