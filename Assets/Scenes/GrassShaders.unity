@@ -380,6 +380,7 @@ MonoBehaviour:
   grassMaterial: {fileID: 2100000, guid: a42c85f618261e849b492491ec2e175e, type: 2}
   LOD_Material: {fileID: 2100000, guid: e7fd8612d3136d84181fddabd497231f, type: 2}
   terrainDimension: 1000
+  densityDividant: 150
   numChunks: 40
   scale: 8
   lodCutoff: 185

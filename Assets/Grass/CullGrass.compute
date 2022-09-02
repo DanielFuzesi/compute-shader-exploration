@@ -3,6 +3,8 @@
 #pragma kernel ScanGroupSums
 #pragma kernel Compact
 #pragma kernel ResetArgs
+#pragma kernel ResetLodDensity
+#pragma kernel DecreaseLodDensity
 
 #define NUM_THREAD_GROUPS_X 64
 
@@ -10,7 +12,7 @@ struct GrassData {
     float4 position;
     float2 uv;
     float displacement;
-    bool placePosition;
+    uint placePosition;
 };
 
 RWStructuredBuffer<uint> _ArgsBuffer;
@@ -25,6 +27,7 @@ RWStructuredBuffer<GrassData> _CulledGrassOutputBuffer;
 
 float4x4 MATRIX_VP;
 int _NumOfGroups;
+uint _GrassBufferSize, _DensityDividant;
 groupshared uint temp[2 * NUM_THREAD_GROUPS_X];
 groupshared uint grouptemp[2 * 1024];
 float _Distance;
@@ -163,3 +166,20 @@ void Compact(uint3 id : SV_DISPATCHTHREADID, uint groupIndex : SV_GROUPINDEX, ui
 void ResetArgs(uint3 id : SV_DISPATCHTHREADID) {
     _ArgsBuffer[1] = (uint)0;
 }
+
+[numthreads(64, 1, 1)]
+void ResetLodDensity(uint3 id : SV_DispatchThreadID) {
+    if (id.x <= _GrassBufferSize) {
+        _GrassDataBuffer[id.x].placePosition = 1;
+    }
+}
+
+[numthreads(64, 1, 1)]
+void DecreaseLodDensity(uint3 id : SV_DispatchThreadID) {
+    if (id.x <= _GrassBufferSize) {
+        if (fmod(id.x, _DensityDividant) != 0) {
+            _GrassDataBuffer[id.x].placePosition = 0;
+        }
+    }
+}
+

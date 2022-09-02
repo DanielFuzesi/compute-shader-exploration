@@ -4,8 +4,8 @@ ToDo For Grass:
 [ ] LOD grass doesnt always match color, add white and black overlay/multiplication parameter
 [ ] Grass mesh has 2 extra vertecies after importing from Blender
 [ ] Use card mesh (1 sided quad with texture) for LOD grass
-	[ ] Since it takes up more space less positions points should be used
-	[ ] Smaller density for far grass
+	[X] Since it takes up more space less positions points should be used
+	[X] Smaller density for far grass
 	[ ] Grass could rotate towards player
 	[ ] Blend card mesh and grass blade mesh when switching LOD to avoid pop-in
 		[ ] When switching from low LOD to high quality grass try to make the grass grow from the ground to avoid pop-in

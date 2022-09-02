@@ -28,6 +28,7 @@ public class Grass : MonoBehaviour
     [SerializeField] private Material grassMaterial;
     [SerializeField] private Material LOD_Material;
     [SerializeField] private int terrainDimension;
+    [SerializeField] private int densityDividant = 100;
     [SerializeField] private int numChunks = 1;
     [SerializeField] private float scale = 1;
 
@@ -268,10 +269,22 @@ public class Grass : MonoBehaviour
     // Method to cull grass
     private void CullGrass(GrassChunk chunk, Matrix4x4 VP, bool noLOD) {
         // Reset Args
-        if (noLOD)
+        if (noLOD) {
+            // All grass is visible
             chunk.argsBuffer.SetData(args);
-        else
+
+            cullGrassShader.SetInt("_GrassBufferSize", chunk.positionsBuffer.count);
+            cullGrassShader.SetBuffer(5, "_GrassDataBuffer", chunk.positionsBuffer);
+            cullGrassShader.Dispatch(5, chunk.positionsBuffer.count, 1, 1);
+        } else {
+            // Less visible grass
             chunk.argsBufferLOD.SetData(argsLOD);
+
+            cullGrassShader.SetInt("_GrassBufferSize", chunk.positionsBuffer.count);
+            cullGrassShader.SetInt("_DensityDividant", densityDividant);
+            cullGrassShader.SetBuffer(6, "_GrassDataBuffer", chunk.positionsBuffer);
+            cullGrassShader.Dispatch(6, chunk.positionsBuffer.count, 1, 1);
+        }
 
         // Vote
         cullGrassShader.SetMatrix("MATRIX_VP", VP);
