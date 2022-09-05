@@ -155,8 +155,6 @@ public class Grass : MonoBehaviour
         // Set terrain fields
         fieldBounds = new Bounds(terrainCenter, new Vector3(terrainDimension, terrainData.size.y / 2, terrainDimension));
 
-        // CreateBallsAtPos();
-
         time = Time.realtimeSinceStartup - time;
         Debug.Log("Execution Time Overall: " + time);
     }
@@ -283,7 +281,7 @@ public class Grass : MonoBehaviour
             cullGrassShader.SetInt("_GrassBufferSize", chunk.positionsBuffer.count);
             cullGrassShader.SetInt("_DensityDividant", densityDividant);
             cullGrassShader.SetBuffer(6, "_GrassDataBuffer", chunk.positionsBuffer);
-            cullGrassShader.Dispatch(6, chunk.positionsBuffer.count, 1, 1);
+            cullGrassShader.Dispatch(6, chunk.positionsBuffer.count/64, 1, 1);
         }
 
         // Vote

@@ -80,7 +80,7 @@ Shader "Unlit/BillboardGrass"
                 animationDirection = normalize(RotateAroundYInDegrees(animationDirection, idHash * 180.0f));
 
                 // Get local position of the vertices and manipulate grass height
-                float4 localPosition = RotateAroundYInDegrees(v.vertex, idHash * 180.0f);
+                float4 localPosition = mul(UNITY_MATRIX_T_MV, v.vertex);
                 localPosition.y += _Scale * v.uv.y * v.uv.y * v.uv.y;
                 localPosition.xz += _Droop * lerp(0.5f, 1.0f, idHash) * (v.uv.y * v.uv.y * _Scale) * animationDirection;
 

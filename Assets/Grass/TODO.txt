@@ -6,14 +6,14 @@ ToDo For Grass:
 [ ] Use card mesh (1 sided quad with texture) for LOD grass
 	[X] Since it takes up more space less positions points should be used
 	[X] Smaller density for far grass
-	[ ] Grass could rotate towards player
+	[X] Grass could rotate towards player
 	[ ] Blend card mesh and grass blade mesh when switching LOD to avoid pop-in
 		[ ] When switching from low LOD to high quality grass try to make the grass grow from the ground to avoid pop-in
 	[X] Use alpha cutout to avoid overdraw
 [X] Calculate how many grass positions exist inside of every chunk to lower Compute Buffer size
 [ ] Instead of using a culling buffer try using the boolean value within Grass struct to check if grass should be culled or not
 [ ] Bend the grass mesh at center for a more realistic effect
-[ ] Rotate the blades towards camera to avoid thin looking grass
+[X] Rotate the high quality blades towards camera to avoid thin looking grass
 [ ] Possibly add some translucency to the top of the grass blade
 [ ] Short grass should use a 1 tri grass mesh
 [ ] Dynamic LOD density, grass becomes more dense when walking up close and less in further scenes
