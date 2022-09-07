@@ -7,6 +7,8 @@ Shader "Unlit/BillboardGrass"
         _Albedo2 ("Albedo 2", Color) = (1, 1, 1)
         _AOColor ("Ambient Occlusion", Color) = (1, 1, 1)
         _TipColor ("Tip Color", Color) = (1, 1, 1)
+        _AlbedoBrightness("Albedo Brightness", Range(1.0, 10)) = 1.6
+        _Saturation("Color Saturation", Range(-10, 10)) = 0.6
         _Scale ("Scale", Range(-0.3, 10.0)) = 0.0
         _HeightOffset("Texture Height Offset", Range(1.0, 10)) = 1.0
         _Droop ("Droop", Range(0.0, 10.0)) = 0.0
@@ -59,9 +61,14 @@ Shader "Unlit/BillboardGrass"
                 uint placePosition;
             };
 
+            void Unity_Saturation_float(float3 In, float Saturation, out float3 Out) {
+                float luma = dot(In, float3(0.2126729, 0.7151522, 0.0721750));
+                Out =  luma.xxx + Saturation.xxx * (In - luma.xxx);
+            }
+
             sampler2D _WindTex, _MaskTex;
             float4 _Albedo1, _Albedo2, _AOColor, _TipColor, _FogColor;
-            float _Scale, _Droop, _FogDensity, _FogOffset, _HeightOffset;
+            float _Scale, _Droop, _FogDensity, _FogOffset, _HeightOffset, _AlbedoBrightness, _Saturation;
             StructuredBuffer<GrassData> positionBuffer;
 
             int _ChunkNum;
@@ -112,7 +119,13 @@ Shader "Unlit/BillboardGrass"
             fixed4 frag (v2f i) : SV_Target
             {
                 fixed4 mask = tex2D(_MaskTex, i.uv).a;
-                float4 col = lerp(_Albedo1, _Albedo2, i.uv.y);
+                float4 col = lerp(_Albedo1, _Albedo2, i.uv.y) * _AlbedoBrightness;
+                float3 col3 = col.xyz;
+
+                Unity_Saturation_float(col3, _Saturation, col3);
+                col.xyz = col3.xyz;
+
+
                 float3 lightDir = _WorldSpaceLightPos0.xyz;
                 float ndotl = DotClamped(lightDir, normalize(float3(0, 1, 0)));
 

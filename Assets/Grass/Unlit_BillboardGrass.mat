@@ -28,13 +28,15 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
+    - _AlbedoBrightness: 1.5
     - _CullingBias: 0.392
     - _Droop: 0
     - _FogDensity: 0
     - _FogOffset: 0
-    - _HeightOffset: 5.2
+    - _HeightOffset: 2.8
     - _LODCutoff: 245
-    - _Scale: 0
+    - _Saturation: 0.6
+    - _Scale: 1
     - _WindStrength: 1
     m_Colors:
     - _AOColor: {r: 0.12156858, g: 0.67058825, b: 0.5372549, a: 1}

@@ -1,7 +1,7 @@
 ToDo For Grass:
 [X] Normalize image sampling index (0-1) to get same sampling scale in any texture
 	[X] Allows to use smaller placement map textures for similar effect
-[ ] LOD grass doesnt always match color, add white and black overlay/multiplication parameter
+[X] LOD grass doesnt always match color, add white and black overlay/multiplication parameter
 [ ] Grass mesh has 2 extra vertecies after importing from Blender
 [ ] Use card mesh (1 sided quad with texture) for LOD grass
 	[X] Since it takes up more space less positions points should be used
