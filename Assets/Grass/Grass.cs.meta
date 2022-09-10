@@ -3,7 +3,15 @@ guid: 2153a9b692ede774d9d8f7b9f3c5072e
 MonoImporter:
   externalObjects: {}
   serializedVersion: 2
-  defaultReferences: []
+  defaultReferences:
+  - placementTexture: {fileID: 2800000, guid: 88a1dbacf6f127a4b8f9e214131dc799, type: 3}
+  - initPlacementShader: {fileID: 7200000, guid: a03c152da238a584da1a7b96f5ea4f0b, type: 3}
+  - generateWindShader: {fileID: 7200000, guid: fd556ce3dd43b5d489abc4f0ce130011, type: 3}
+  - cullGrassShader: {fileID: 7200000, guid: 9b2735f7877102e4eb3aa23dfc135c47, type: 3}
+  - grassMesh: {fileID: 3000601502379706560, guid: fca8ffd556129e444aabe6bd9d974033, type: 3}
+  - grassLODMesh: {fileID: 10210, guid: 0000000000000000e000000000000000, type: 0}
+  - grassMaterial: {fileID: 2100000, guid: a42c85f618261e849b492491ec2e175e, type: 2}
+  - LOD_Material: {fileID: 2100000, guid: e7fd8612d3136d84181fddabd497231f, type: 2}
   executionOrder: 0
   icon: {instanceID: 0}
   userData: 

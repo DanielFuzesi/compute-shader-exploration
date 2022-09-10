@@ -383,7 +383,7 @@ MonoBehaviour:
   densityDividant: 100
   numChunks: 40
   scale: 8
-  lodCutoff: 150
+  lodCutoff: 145
   distanceCutoff: 600
   windSpeed: 2
   frequency: 2
